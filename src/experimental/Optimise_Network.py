@@ -4790,34 +4790,3 @@ class Optimise_Network():
                 location = get_random_location()
             user = {'id':idx, 'location':location}
             self.users.append(user)
-
-"""
-    def approve_handover(self, user, cell, small):
-        # checks whether a handover will lead to an increase in
-        # performance for a user. Only recommends a handover if
-        # performance increases. This is for use with multiple macro
-        # cells running ABS
-
-        handover = false
-        gain_macro = cell.gain(user.location(1), user.location(2))
-        gain_small = small.gain(user.location(1), user.location(2))
-        sum_macro = 0
-        other_cells = {}
-        for macro in self.n_macro_cells:
-            if ~ macro == cell
-                if isempty(other_cells)
-                    other_cells{1} = macro
-                else
-                    other_cells{end+1} = macro
-
-        for i = 1:(self.n_macro_cells - 1):
-            macro = other_cells{i}
-            huk = macro.gain(user.location(1), user.location(2))+macro.power
-            sum_macro = sum_macro + huk
-
-        signal = (gain_small+small.power) * ((gain_small+small.power)+sum_macro) / ((gain_macro+macro.power)-(gain_small+small.power))
-        interference = get_interference(self, user)
-        if signal > interference
-            handover = true
-        return handover
-"""
