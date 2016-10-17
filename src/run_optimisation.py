@@ -1,41 +1,52 @@
+from algorithm import parameters
+from experimental import setup_run
 
-from os import getcwd, path
-from time import sleep
-import random
+from os import getcwd
+import random, sys, getopt
+
+
 random.seed(10)
 scheduling = {}
+
+
+def get_command_line_args(command_line_args):
+    """
+    Parse command line arguments and set parameters correctly.
+    
+    :param command_line_args: Arguments specified from the command line.
+    :return: Nothing.
+    """
+
+    try:
+        opts, args = getopt.getopt(command_line_args[1:], "",
+                                   ["parameters="])
+    except getopt.GetoptError as err:
+        print("Most parameters need a value associated with them \n",
+              "Run python ponyge.py --help for more info")
+        print(str(err))
+        exit(2)
+
+    for opt, arg in opts:
+        if opt == "--parameters":
+            parameters.load_params("../parameters/" + arg)
+        else:
+            print("Error: Must specify parameters file with --parameters. "
+                  "Cannot accept any other arguements at the moment.")
 
 
 def mane():
     """allows you to run the Optimise_Network program outside of an
     evolutionary setting."""
-    SC_DISTRIBUTION = "test"
 
-    """ Number of Small Cells in the simulation. Currently available sets are
-        3, 30, 50, 79, and 100 SCs."""
-    no_small_cells = 30
-
-    """ Number of users in the simulation."""
-    N_USERS = 5000 # 1260 # 5000
-
-    """ Stress test the network by placing UEs in the worst possible locations.
-        """
-    stress_test = False
-
-    """ How much information do we pull out of the estimated SINR matrix?
-        Level 1: use quantized channel gain matrix
-        Level 2: SINR values quantized to [0:2:30]
-        Level 3: SINR values averaged over ABS and non-ABS, quantized to
-                 [0:2:30]
-    """
-    difficulty = 3  # 1 / 2 / 3
-
-    """ Do we want to give the benchmark the best possible chance? Then we
-        allow SC powers and biases to change using our optimisation algorithm.
-        Otherwise they're fixed (which is how the benchmark works, but isn't
-        exactly fair)."""
-    fair = False
-
+    parameters.params['TEST_DATA'] = False
+    parameters.params['PRE_COMPUTE'] = False
+    parameters.params['SCENARIO'] = 0
+    parameters.params['ITERATIONS'] = 100
+    parameters.params['N_SMALL_TRAINING'] = 30
+    parameters.params['REALISTIC'] = True
+    parameters.params['DIFFICULTY'] = 3
+    setup_run.main()
+    
     """ Compares given solutions against both baseline and benchmark results.
         Returns the average difference in performance between the evolved and
         benchmark methods (in terms of a percentage)."""
@@ -44,10 +55,6 @@ def mane():
     """ Run the network but using the benchmark methods for ABS and scheduling.
     """
     BENCHMARK = False
-
-    """ Runs the network using realistic network parameters, including
-        quantized SINR information."""
-    REALISTIC = True
 
     """ Apply all optimisation steps on the network in one go rather than
         running each step (power & bias, ABS, scheduling) separately. Gives the
@@ -72,15 +79,9 @@ def mane():
     """ Prints out network statistics after each full frame."""
     PRINT_STATS = True
 
-    """ Number of different scenarios the network is to be run for."""
-    iterations = 100
-
-    """ Starting scenario from which to run the network."""
-    scenario = 10
-
     """ Main scheduling method to use on the network. Available scheduling
         methods are defined in the "scheduling" dictionary below."""
-    scheduling_type = "simplified_threshold"
+    scheduling_type = "high_density_threshold"
 
     scheduling['original_low_density_threshold'] = "(T20-(pdiv(T13, T14)-pdiv((((np.sign(np.sin(T15))+np.sign((T16*T10)))*(T6*pdiv(pdiv(T17, T7), pdiv(T5, T18))))+(((T13*(T8-T4))-(np.sqrt(abs(T9))+(T21+T18)))+pdiv(((T21+T20)-T17), np.sqrt(abs(pdiv(T11, ABS)))))), (((ABS+pdiv(ABS, T8))-pdiv(pdiv(pdiv(T9, T8), np.sqrt(abs(T19))), (T13*T9)))+((np.sign((T16*T7))+pdiv(ABS, np.sign(T20)))-np.sin((np.log(1+abs(T9))*np.log(1+abs(T20)))))))))"
 
@@ -88,34 +89,9 @@ def mane():
 
     scheduling['simplified_threshold'] = "ABS*(0.5+((T6*T17*(T4-T5))-T4))"
     
-    scheduling['test_topology'] = "np.sqrt(abs((pdiv((pdiv(((T17*T15)+np.sign((T20*T12))), +0.6)*((T16*T3)-(np.sin((T20*T2))+(pdiv(T20, T15)-pdiv(T14, T17))))), pdiv((T9-(np.sign(T11)-np.sqrt(abs((T4-T3))))), ((pdiv(T2, np.sin(T20))-(T5-pdiv(T3, T12)))+(((T7*T2)*(T15+T2))*(pdiv(T5, T17)+pdiv(T21, T17))))))*pdiv((T5-T15), ((T18*np.log(1+abs((np.sqrt(abs(T3))+np.log(1+abs(T13))))))+np.sin((((T19+T19)+(T2*T20))-np.log(1+abs(T19)))))))))"
+    scheduling['high_density_threshold'] = "((np.sqrt(abs(np.sqrt(abs(np.log(1+abs(np.sin((pdiv(T8, ABS)*(ABS*T17)))))))))-(np.log(1+abs(pdiv((np.sin(np.sqrt(abs(T8)))-pdiv(pdiv(T16, T15), np.log(1+abs(T17)))), (T6-pdiv(np.log(1+abs(T16)), T17)))))*T7))*ABS)"
 
     if True:
-        import hold_network_info
-        curr_path = getcwd()
-        run_sim = False
-        if not path.isfile(curr_path + "/bell_simulation/gain_" + str(no_small_cells) + ".mat"):
-            print("\nError: gain matrix does not exist for network with", no_small_cells, "small cells.\n")
-            sleep(1)
-            print("Matlab must be run to generate a new gain matrix.\n")
-            sleep(1)
-            user_input = input("Do you wish to run Matlab? ['yes' | 'no']\n\n")
-            if user_input in ["yes", "y", "Yes", "YES", "Y"]:
-                run_sim = True
-            elif user_input in ["no", "n", "NO", "No", "N"]:
-                print("\nSuit yourself so.\n")
-                quit()
-
-        print("\nEvaluating", SC_DISTRIBUTION, "network with", no_small_cells, "small cells...\n")
-
-        hold_network_info.init(run_sim, N_USERS,
-            test=no_small_cells,
-            both=False,
-            set=SC_DISTRIBUTION,
-            b_lim=15,
-            ITERATIONS=iterations,
-            STRESS=stress_test,
-            SCENARIO=scenario)
 
         if True:
             scheduling["original_sched"] = "self.pdiv(min_SINR, SINR - max_SINR) < (self.pdiv(tan(min_cell_SINR - num_shared), max_cell_SINR * good_slots) + min_cell_SINR)"
@@ -136,7 +112,7 @@ def mane():
 
         abs_algorithm = "self.pdiv(ABS_MUEs, non_ABS_MUEs + ABS_MSUEs)"#"self.pdiv(ABS_MUEs * ABS_MUEs, (float('7') + non_ABS_MUEs * non_ABS_MUEs + float('8')))"#
 
-        import Optimise_Network as OPT
+        import experimental.Optimise_Network as OPT
 
         network = OPT.Optimise_Network(
             PB_ALGORITHM=pb_algorithm,
@@ -148,13 +124,10 @@ def mane():
             MAP=MAP_NETWORK,
             SAVE=SAVE_STATS,
             SHOW=SHOW_PLOTS,
-            DISTRIBUTION=SC_DISTRIBUTION,
-            REAL=REALISTIC,
+            REAL=parameters.params['REALISTIC'],
             DIFFERENCE=COMPARE,
-            DIFFICULTY=difficulty,
-            FAIR=fair,
             BENCHMARK=BENCHMARK)
-        fitnesses = network.run_all_2()
+        fitness = network.run_all_2()
         network.get_average_performance(OUTPUT=True)
         if SAVE_STATS:
             TIME_STAMP = network.TIME_STAMP
@@ -162,14 +135,15 @@ def mane():
             visualise_schedule.mane(getcwd() + "/Network_Stats/" + str(TIME_STAMP) + "/Heatmaps/", str(TIME_STAMP))
 
         if network.difference:
-            print("Performance differential:", fitnesses)
+            print("Performance differential:", fitness)
         else:
-            print("Fitnesses:")
-            for key in list(fitnesses.keys()):
-                if ('CDF' not in key) and (key != 'frequency') and (key != 'power_bias'):
-                    print(" ", str(key), ":\t", fitnesses[key])
-
+            print("Fitness:", fitness)
         print("\n\n")
 
 if __name__ == "__main__":
+    
+    # Parse command line arguments.
+    get_command_line_args(sys.argv)
+    
+    # Run main program.
     mane()
