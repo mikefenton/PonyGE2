@@ -1,6 +1,6 @@
 from algorithm.parameters import params
 from fitness.default_fitness import default_fitness
-from experimental import pre_computed_network as PCN
+from networks.pre_compute import pre_compute_network as PCN
 
 
 class scheduling_optimisation():
@@ -13,7 +13,7 @@ class scheduling_optimisation():
         self.training_test = True
 
         if "NETWORK_OPTIMISATION" in params and params['HOLD_NETWORK']:
-            from experimental.setup_run import main
+            from networks.setup_run import main
             main()
 
     def __call__(self, phenotype, dist='training'):
@@ -25,20 +25,16 @@ class scheduling_optimisation():
             scheduling_type = phenotype.split("break")[0]
             scheduling_algorithm = phenotype.split("break")[1]
 
-        if params['PRE_COMPUTE'] and dist=="training":
+        if params['PRE_COMPUTE'] and dist == "training":
             fitness = PCN.standalone_scheduler.return_pre_compute_fitness(
-                scheduling_algorithm, scheduling_type,
-                PCN.pre_computed_network)
-
+                scheduling_algorithm, scheduling_type)
         else:
-            import experimental.Optimise_Network as OPT
-            the_network = OPT.Optimise_Network(
+            import networks.Optimise_Network as OPT
+            network = OPT.Optimise_Network(
                         SCHEDULING_ALGORITHM=scheduling_algorithm,
                         SCHEDULING_TYPE=scheduling_type,
-                        DISTRIBUTION=dist,
-                        REAL=params['REALISTIC'],
-                        DIFFICULTY=params['DIFFICULTY'])
-            fitness = the_network.run_all()
+                        DISTRIBUTION=dist)
+            fitness = network.run_all()
 
         if not fitness:
             fitness = default_fitness(self.maximise)

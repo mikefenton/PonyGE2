@@ -1,42 +1,32 @@
-
 from operator import itemgetter
 from copy import deepcopy
 import numpy as np
 
 from utilities.fitness.math_functions import pdiv
+from algorithm.parameters import params
+from networks.math_functions import return_percent
+from networks.pre_compute import pre_compute_network as PCN
 
 
 class Standalone_Fitness:
-    """ A class for calculating the fitness of a schedule without running the network (hopefully hella fast)"""
+    """
+    A class for calculating the fitness of a schedule without running the
+    network.
+    
+    """
 
-    def __init__(self, realistic=True, difficulty=3, distribution="training"):
-        import experimental.Optimise_Network as OPT
+    def __init__(self, distribution="training"):
+        import networks.Optimise_Network as OPT
         self.OPT = OPT.Optimise_Network(
                    PB_ALGORITHM="pdiv(ms_log_R, N_s)",
                    ABS_ALGORITHM="pdiv(ABS_MUEs,non_ABS_MUEs+ABS_MSUEs)",
-                   DISTRIBUTION=distribution,
-                   REAL=realistic,
-                   DIFFICULTY=difficulty)
-        self.REALISTIC = realistic
-        self.DIFFICULTY = difficulty
+                   DISTRIBUTION=distribution)
+        self.REALISTIC = params['REALISTIC']
+        self.DIFFICULTY = params['DIFFICULTY']
         self.bandwidth = self.OPT.bandwidth
         self.SINR_limit = self.OPT.SINR_limit
 
-    def return_percent(self, original, new):
-        """ Returns a number as a percentage change from an original number."""
-        if original < 0:
-            new -= original
-            original = 0
-        return -(100 - new/float(original)*100)
-
-    def pre_compute_network(self):
-        """ Pre-compute all the required data from the network """
-
-        pre_computed_network = self.OPT.save_pre_compute_scenarios()
-        return pre_computed_network
-
-    def return_pre_compute_fitness(self, scheduler, scheduler_type,
-                                   pre_computed_scenarios, name=None):
+    def return_pre_compute_fitness(self, scheduler, scheduler_type, name=None):
         """ Run a full frame of the network using the pre-computed stats """
 
         self.improvement_R_list = []
@@ -58,7 +48,7 @@ class Standalone_Fitness:
         if check or (type(check) is np.float64) or (type(check) is float):
             return None
 
-        for index, scenario in enumerate(pre_computed_scenarios):
+        for index, scenario in enumerate(PCN.pre_computed_network):
 
             self.PRE_COMPUTE = True
             self.NAME = name
@@ -218,5 +208,5 @@ class Standalone_Fitness:
         log_average_downlinks = np.log(average_downlinks[average_downlinks > 0])
         log_average_downlinks[log_average_downlinks == -np.inf] = 0
         sum_log_R = np.sum(log_average_downlinks)
-        fitness = self.return_percent(self.first_log_R, sum_log_R)
+        fitness = return_percent(self.first_log_R, sum_log_R)
         return fitness

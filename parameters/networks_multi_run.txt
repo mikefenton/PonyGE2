@@ -38,3 +38,5 @@ PRE_COMPUTE:           True
 NETWORK_OPTIMISATION:  True
 STRESS_TEST:           False
 RUNS:                  20
+SINR_limits:           [-5, 23]
+BANDWIDTH:             20000000

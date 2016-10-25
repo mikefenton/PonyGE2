@@ -185,6 +185,7 @@ def save_stats_to_file(end=False):
 def save_stats_headers():
     """
     Saves the headers for all stats in the stats dictionary.
+    
     :return: Nothing.
     """
 
