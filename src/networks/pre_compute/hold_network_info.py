@@ -4,7 +4,7 @@ from os import path, getcwd
 
 def init(simulation, set="test"):
 
-    import experimental.Define_Network as DEFNET
+    import networks.Define_Network as DEFNET
     global network_params_2, network_params_1
 
     curr_path = getcwd()

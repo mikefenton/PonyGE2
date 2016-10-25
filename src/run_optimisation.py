@@ -1,9 +1,10 @@
-from algorithm import parameters
-from experimental import setup_run
-
-from os import getcwd
 import random, sys, getopt
 
+from networks.comparisons import output_final_average_performance
+from algorithm.parameters import params, load_params
+from networks import setup_run
+from datetime import datetime
+from networks import visualise_schedule
 
 random.seed(10)
 scheduling = {}
@@ -28,24 +29,48 @@ def get_command_line_args(command_line_args):
 
     for opt, arg in opts:
         if opt == "--parameters":
-            parameters.load_params("../parameters/" + arg)
+            load_params("../parameters/" + arg)
         else:
             print("Error: Must specify parameters file with --parameters. "
                   "Cannot accept any other arguements at the moment.")
+
+
+def generate_time_stamp():
+    """
+    Generate a time stamp.
+    
+    :return: Time stamp.
+    """
+    
+    now = datetime.now()
+    hms = "%02d%02d%02d" % (now.hour, now.minute, now.second)
+    TIME_STAMP = (str(now.year)[2:] + "_" + str(now.month) + "_" +
+                  str(now.day) + "_" + hms)
+    
+    return TIME_STAMP
 
 
 def mane():
     """allows you to run the Optimise_Network program outside of an
     evolutionary setting."""
 
-    parameters.params['TEST_DATA'] = False
-    parameters.params['PRE_COMPUTE'] = False
-    parameters.params['SCENARIO'] = 0
-    parameters.params['ITERATIONS'] = 100
-    parameters.params['N_SMALL_TRAINING'] = 30
-    parameters.params['REALISTIC'] = True
-    parameters.params['DIFFICULTY'] = 3
+    params['TEST_DATA'] = False
+    params['PRE_COMPUTE'] = False
+    params['SCENARIO'] = 10
+    params['ITERATIONS'] = 100
+    params['N_SMALL_TRAINING'] = 30
+    params['REALISTIC'] = True
+    params['N_USERS'] = 1260  # 5000
+    params['SHOW'] = True
+    params['SAVE'] = False
+    params['PRINT'] = True
+    params['MAP'] = False
+    params['FAIR'] = False
+    params['COLLECT_STATS'] = True
+    params['TIME_STAMP'] = generate_time_stamp()
     setup_run.main()
+    if params['SAVE']:
+        setup_run.generate_save_folder(params['TIME_STAMP'])
     
     """ Compares given solutions against both baseline and benchmark results.
         Returns the average difference in performance between the evolved and
@@ -63,21 +88,6 @@ def mane():
         fitness is the improvement realised by the last applied operation (e.g.
         Power/Bias, ABS, or Scheduling optimisation)."""
     OPT_ALL_TOGETHER = False
-
-    """ Display CDF plots of network performance at each full frame."""
-    SHOW_PLOTS = True
-
-    """ Saves stats of network performance at each full frame. If SHOW_PLOTS or
-        MAP_NETWORK are true, then saves thos respective things too."""
-    SAVE_STATS = False
-
-    """ Generates a heatmap of the network with all UEs located on the map.
-        Either SHOW_PLOTS or SAVE_PLOTS must be set to True for this to does
-        something."""
-    MAP_NETWORK = False
-
-    """ Prints out network statistics after each full frame."""
-    PRINT_STATS = True
 
     """ Main scheduling method to use on the network. Available scheduling
         methods are defined in the "scheduling" dictionary below."""
@@ -112,7 +122,7 @@ def mane():
 
         abs_algorithm = "self.pdiv(ABS_MUEs, non_ABS_MUEs + ABS_MSUEs)"#"self.pdiv(ABS_MUEs * ABS_MUEs, (float('7') + non_ABS_MUEs * non_ABS_MUEs + float('8')))"#
 
-        import experimental.Optimise_Network as OPT
+        import networks.Optimise_Network as OPT
 
         network = OPT.Optimise_Network(
             PB_ALGORITHM=pb_algorithm,
@@ -120,25 +130,21 @@ def mane():
             SCHEDULING_ALGORITHM=scheduling[scheduling_type],
             SCHEDULING_TYPE=scheduling_type,
             ALL_TOGETHER=OPT_ALL_TOGETHER,
-            PRINT=PRINT_STATS,
-            MAP=MAP_NETWORK,
-            SAVE=SAVE_STATS,
-            SHOW=SHOW_PLOTS,
-            REAL=parameters.params['REALISTIC'],
             DIFFERENCE=COMPARE,
             BENCHMARK=BENCHMARK)
         fitness = network.run_all_2()
-        network.get_average_performance(OUTPUT=True)
-        if SAVE_STATS:
-            TIME_STAMP = network.TIME_STAMP
-            import visualise_schedule
-            visualise_schedule.mane(getcwd() + "/Network_Stats/" + str(TIME_STAMP) + "/Heatmaps/", str(TIME_STAMP))
+        output_final_average_performance(network)
+        if params['SAVE']:
+
+            visualise_schedule.mane(params['FILE_PATH'] +
+                                    "Heatmaps/", params['TIME_STAMP'])
 
         if network.difference:
             print("Performance differential:", fitness)
         else:
             print("Fitness:", fitness)
         print("\n\n")
+        quit()
 
 if __name__ == "__main__":
     

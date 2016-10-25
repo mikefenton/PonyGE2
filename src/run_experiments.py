@@ -13,7 +13,7 @@ from operator import itemgetter
 from datetime import datetime
 import sys
 
-from experimental import setup_run
+from networks import setup_run
 import ponyge
 from algorithm.parameters import params, set_params
 from stats.parse_stats import parse_stat_from_runs
