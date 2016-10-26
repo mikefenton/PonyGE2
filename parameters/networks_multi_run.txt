@@ -40,3 +40,14 @@ STRESS_TEST:           False
 RUNS:                  20
 SINR_limits:           [-5, 23]
 BANDWIDTH:             20000000
+CDF_log:               False
+SYNCHRONOUS_ABS:            True
+SINR_interference_limit:    11
+min_ABS_ratio:              0.875
+SINR_limits:                [-5, 23]
+SAVE:                       False
+SHOW:                       False
+PRINT:                      False
+MAP:                        False
+COLLECT_STATS:              False
+FAIR:                       False

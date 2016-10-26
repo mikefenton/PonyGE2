@@ -107,14 +107,14 @@ def get_ABS(self):
     non_ABS_MUEs = ABS_MUEs + ABS_MSUEs
     alpha = 1  # 1/(1-(ABS_MSUEs/non_ABS_MUEs))
     
-    numbers = np.asarray([self.min_ABS_ratio for _ in range(
+    numbers = np.asarray([params['min_ABS_ratio'] for _ in range(
         self.n_macro_cells)])  # ABS_MUEs/(ABS_MUEs + ABS_MSUEs)
     
     if self.BENCHMARK_ABS:
         # print "Benchmark ABS"
         numbers = (1 - alpha) + (alpha * ABS_MSUEs / non_ABS_MUEs)
         numbers = np.round(numbers / 0.125) / 8
-        numbers[numbers >= 1] = self.min_ABS_ratio
+        numbers[numbers >= 1] = params['min_ABS_ratio']
         numbers[numbers <= 0] = 0.125
         numbers[np.where(ABS_MUEs == 0)[0]] = 0.125
         numbers = 1 - numbers
@@ -125,26 +125,25 @@ def get_ABS(self):
         if type(numbers) == float:
             numbers = np.array([numbers for _ in range(self.n_macro_cells)])
         numbers = np.round(numbers / 0.125) / 8
-        numbers[numbers >= 1] = self.min_ABS_ratio
+        numbers[numbers >= 1] = params['min_ABS_ratio']
         numbers[numbers <= 0] = 0.125
         numbers[np.where(ABS_MUEs == 0)[0]] = 0.125
     
     else:
         numbers = np.round(numbers / 0.125) / 8
-        numbers[numbers >= 1] = self.min_ABS_ratio
+        numbers[numbers >= 1] = params['min_ABS_ratio']
         numbers[numbers <= 0] = 0.125
         numbers[np.where(ABS_MUEs == 0)[0]] = 0.125
     
-    if self.SYNCHRONOUS_ABS:
+    if params['SYNCHRONOUS_ABS']:
         new_ratios = int(round(np.average(numbers) * 8)) / 8
         numbers = [new_ratios for _ in range(self.n_macro_cells)]
     
     for id, macro in enumerate(self.macro_cells):
         macro['ABS_ratio'] = numbers[id]
-        macro['ABS_pattern'] = np.array([1 for i in range(40)])
+        macro['ABS_pattern'] = np.array([1 for _ in range(40)])
         for i in range(int(round(round((1 - macro['ABS_ratio']), 3) / 0.025))):
             macro['ABS_pattern'][(i * 8) % 39] = 0
-        # print macro['id'], "\t", macro['ABS_ratio'], "\t", macro['ABS_pattern']
         macro['ABS_pattern'] = np.asarray(macro['ABS_pattern'])
         self.cumulatvie_ABS_frames += (-macro['ABS_pattern'] + 1)
         
@@ -209,7 +208,7 @@ def set_SINR(self):
     self.SINR_SF_UE_act = received_powers / (
     (actual_interference - received_powers) + self.noise_W)
     
-    l1, l2 = self.SINR_limits[0], self.SINR_limits[1]
+    l1, l2 = params['SINR_limits'][0], params['SINR_limits'][1]
     
     if params['REALISTIC']:
         # Need to limit ACTUAL SINR values to max 23 db (199.5262315 in

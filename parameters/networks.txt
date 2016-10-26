@@ -6,10 +6,10 @@ GENERATIONS:           20
 GENOME_LENGTH:         500
 GRAMMAR_FILE:          scheduling_complete.bnf
 INITIALISATION:        rhh
-LOOKUP_BAD_FITNESS:    False
-LOOKUP_FITNESS:        True
-MAX_INIT_DEPTH:        10
-MAX_TREE_DEPTH:        17
+LOOKUP_BAD_FITNESS:    True
+LOOKUP_FITNESS:        False
+MAX_INIT_DEPTH:        20
+MAX_TREE_DEPTH:        20
 MAX_WRAPS:             0
 MULTICORE:             False
 MUTATE_DUPLICATES:     False
@@ -27,7 +27,7 @@ DIFFICULTY:            3
 HOLD_NETWORK:          True
 N_SMALL_TRAINING:      30
 N_SMALL_TEST:          30
-TEST_DATA:             True
+TEST_DATA:             False
 SCENARIO:              0
 ITERATIONS:            10
 N_USERS:               1260
@@ -35,4 +35,18 @@ SIMULATION:            False
 BIAS_LIMIT:            15
 PRE_COMPUTE:           True
 NETWORK_OPTIMISATION:  True
-STRESS_TEST:           FALSE
+STRESS_TEST:           False
+RUNS:                  20
+SINR_limits:           [-5, 23]
+BANDWIDTH:             20000000
+CDF_log:               False
+SYNCHRONOUS_ABS:            True
+SINR_interference_limit:    11
+min_ABS_ratio:              0.875
+SINR_limits:                [-5, 23]
+SAVE:                       False
+SHOW:                       False
+PRINT:                      False
+MAP:                        False
+COLLECT_STATS:              False
+FAIR:                       False

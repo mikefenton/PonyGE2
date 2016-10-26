@@ -117,46 +117,23 @@ class Optimise_Network():
         self.difference = DIFFERENCE
         self.topology = TOPOLOGY
         self.SINR_limit = 10**(-5/10.0)  # -5 dB
-        self.SINR_limits = [-5, 23]
         self.ALL_TOGETHER = ALL_TOGETHER
-        self.PRINT = params['PRINT']
         self.step = 0.01
         self.SCHEDULING = False
-        self.MAP = params['MAP']
         self.scheduling_algorithm = SCHEDULING_ALGORITHM
         if self.scheduling_algorithm:
             self.SCHEDULING = True
         self.pb_algorithm = PB_ALGORITHM
         self.ABS_algorithm = ABS_ALGORITHM
         self.ABS_activity = np.asarray([1 for _ in range(self.n_all_cells)])
-        self.min_ABS_ratio = 0.875
         # 0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1
-        # A higher number means less frames will be blanked. min ratio of 1
-        # means no frames will be blanked as a minimum. A min ratio of 0.125
-        # means only one frame remains unblanked.
-        self.SINR_interference_limit = 11  # self.n_all_cells
-        # number of interfering cells is this -1
-        self.DIFFICULTY = params['DIFFICULTY']
+
         self.show_all_UEs = False
 
         # Fitness Values
-        self.sum_log_R_list = []
-        self.SINR_list = []
-        self.first_xar = []
-        self.first_yar = []
-        self.max_downs_list = []
-        self.max_perks_list = []
-        self.downlink_5_list = []
-        self.downlink_50_list = []
-        self.SLR_difference_list = []
-        self.SLR_difference_list_2 = []
-        self.SLR_difference_list_3 = []
         self.SC_dict = {}
 
-        self.helpless_UEs = []
-        self.CDF_log = False
         self.OPT_SCHEDULING = False
-        self.SYNCHRONOUS_ABS = True
         self.BENCHMARK = BENCHMARK
         self.BENCHMARK_SCHEDULING = False
         self.BENCHMARK_ABS = False
@@ -164,10 +141,8 @@ class Optimise_Network():
         if self.BENCHMARK:
             self.BENCHMARK_SCHEDULING = True
             self.BENCHMARK_ABS = True
-        self.REALISTIC = params['REALISTIC']
-        self.FAIR = params['FAIR']
         self.SCHEDULING_TYPE = SCHEDULING_TYPE
-        if not self.REALISTIC:
+        if not params['REALISTIC']:
             self.SINR_interference_limit = self.n_all_cells
         if scenario:
             self.SCENARIO = scenario
@@ -184,11 +159,6 @@ class Optimise_Network():
         self.MC_UES = []
         self.SC_UES = []
         self.frame = 0
-        # Set minimum number of scheduled sub-frames for all UEs at 5 sub-
-        # frames out of a full frame of 40 sub-frames. This is because the
-        # maximum permissible ABS ratio is 35/40, meaning there will always
-        # be a minimum of 5 frames out of 40 with full MC transmission.
-        self.SHOW = params['SHOW']
         
         self.schedule_info = np.zeros(shape=(self.n_all_cells, 40, self.n_users))
         self.schedule_info1 = np.zeros(shape=(40, self.n_users))
@@ -205,104 +175,84 @@ class Optimise_Network():
         # original seed is 13
         seed(self.seed)
         np.random.seed(self.seed)
-        self.time_list = []
-        time1 = datetime.now()
-        self.time_list.append(time1)
 
         self = balance_bias(self)
 
-        if self.difference:
-            self.get_normalised_benchmark_difference()
-            quit()
+        """ Run the network for a specified number of frames here. Simply
+            delete "if None:#".
+        """
+        for frame in range(self.iterations):
+            self.iteration = self.scenario + frame
+            self.users = self.user_scenarios[frame]
 
-        else:
+            # self.reset_to_zero()
+            # self.update_network(FIST=True)
+            # answers = self.run_full_frame(first=True, two=self.PRINT)
 
-            """ Run the network for a specified number of frames here. Simply
-                delete "if None:#".
-            """
-            for frame in range(self.iterations):
-                self.iteration = self.scenario + frame
-                self.users = self.user_scenarios[frame]
-
-                # self.reset_to_zero()
-                # self.update_network(FIST=True)
-                # answers = self.run_full_frame(first=True, two=self.PRINT)
-
-                if self.BENCHMARK:
-                    if self.FAIR:
-                        self = balance_network(self)
-                    else:
-                        self = set_benchmark_pb(self)
-                        self.update_network()
-                    answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
-
-                elif self.ALL_TOGETHER:
-                    # If we're evolving everything together then we don't need to
-                    # run things separately to get individual fitnesses. We only
-                    # need to run the network multiple times in order to get
-                    # individual fitnesses for ABS and Scheduling (i.e. the
-                    # fitness for scheduling will be the increase in fitness over
-                    # ABS, etc.). If we're doing everything together, then we can
-                    # just do it all in one step and save a ton of time since we
-                    # get the same answer anyway. Good stuff!
+            if self.BENCHMARK:
+                if self.FAIR:
                     self = balance_network(self)
-                    answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
-
-                elif not self.ABS_algorithm and not self.SCHEDULING:
-                    # Just the fitness from the pb algorithm
-                    self = balance_network(self)
-                    answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
-
-                elif self.ABS_algorithm and not self.SCHEDULING:
-                    # Just the fitness from the ABS algorithm
-                    self = balance_network(self)
-                    answers = self.run_full_frame(first=True, two=self.PRINT, three=self.SAVE)
-                    self.update_network()
-                    answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
-
                 else:
-                    # Just the fitness from the scheduling algorithm
-                    self.ALL_TOGETHER = True
-                    self.SCHEDULING = False
-
-                    # self.balance_network()
-
-                    self.BENCHMARK_ABS = True
                     self = set_benchmark_pb(self)
-                    self.update_network(FIST=True)
-
-                    answers = self.run_full_frame(first=True, two=self.PRINT, three=self.SAVE)
-                    self.SCHEDULING = True
                     self.update_network()
-                    answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
-                    self.ALL_TOGETHER = False
+                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
 
-                if self.SHOW or self.SAVE:
-                    self.save_CDF_plot("Scheduling_"+str(frame), SHOW=self.SHOW, SAVE=self.SAVE)
+            elif self.ALL_TOGETHER:
+                # If we're evolving everything together then we don't need to
+                # run things separately to get individual fitnesses. We only
+                # need to run the network multiple times in order to get
+                # individual fitnesses for ABS and Scheduling (i.e. the
+                # fitness for scheduling will be the increase in fitness over
+                # ABS, etc.). If we're doing everything together, then we can
+                # just do it all in one step and save a ton of time since we
+                # get the same answer anyway. Good stuff!
+                self = balance_network(self)
+                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
 
-                if self.MAP:
-                    heatmaps.save_heatmap(self, "Optimised")
+            elif not self.ABS_algorithm and not self.SCHEDULING:
+                # Just the fitness from the pb algorithm
+                self = balance_network(self)
+                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
 
-                if answers == 0:
-                    # no point checking other scenarios this guy does nothing
-                    break
+            elif self.ABS_algorithm and not self.SCHEDULING:
+                # Just the fitness from the ABS algorithm
+                self = balance_network(self)
+                answers = self.run_full_frame(first=True, two=self.PRINT, three=self.SAVE)
+                self.update_network()
+                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
 
-                if self.ALL_TOGETHER and answers < 2:
-                    # no point checking other scenarios this guy sucks
-                    break
+            else:
+                # Just the fitness from the scheduling algorithm
+                self.ALL_TOGETHER = True
+                self.SCHEDULING = False
 
-                elif answers < -5:
-                    # no point checking other scenarios this guy sucks
-                    break
+                # self.balance_network()
 
-                # self.get_average_performance()
+                self.BENCHMARK_ABS = True
+                self = set_benchmark_pb(self)
+                self.update_network(FIST=True)
 
-            total_time = self.time_list[-1] - self.time_list[0]
-            if self.PRINT:
-                print("\nTotal time taken:", total_time)
-            setstate(state)
+                answers = self.run_full_frame(first=True, two=self.PRINT, three=self.SAVE)
+                self.SCHEDULING = True
+                self.update_network()
+                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
+                self.ALL_TOGETHER = False
 
-            return answers
+            if self.SHOW or self.SAVE:
+                self.save_CDF_plot("Scheduling_"+str(frame), SHOW=self.SHOW, SAVE=self.SAVE)
+
+            if params['MAP']:
+                heatmaps.save_heatmap(self, "Optimised")
+
+            if stats['ave_improvement_R'] == 0 or stats['ave_improvement_R'] < -5:
+                # no point checking other scenarios this guy does nothing
+                break
+
+            if self.ALL_TOGETHER and stats['ave_improvement_R'] < 2:
+                # no point checking other scenarios this guy sucks
+                break
+
+            return stats['ave_improvement_R']
 
     def run_all_2(self):
         """run all functions in the class"""
@@ -371,27 +321,27 @@ class Optimise_Network():
         """
         from matplotlib import animation
         
-        def go_frame_go():
+        def go_frame_go(self):
             """ Run the network with a live plot of the CDF of Downlink rates
             """
             self.frame += 1
-            self.run_full_frame(two=self.PRINT, three=self.SAVE)
-            self.ax1.clear()
+            self = run_evolved_frame(self)
+            ax1.clear()
         
-            xar = self.CDF_downlink
-            yar = self.actual_frequency
-            zar = self.CDF_SINR
+            xar = CDFs['CDF_downlink']
+            yar = CDFs['actual_frequency']
+            zar = CDFs['CDF_SINR']
         
-            self.ax1.plot(xar, yar, 'b', self.first_xar, yar, 'r')
-            self.ax1.set_ylabel('Cumulative distribution')
-            self.ax1.set_ylim([0, 1])
-            self.ax1.set_xlabel('Log of downlink rates (bits/sec)', color='b')
+            ax1.plot(xar, yar, 'b', self.first_xar, yar, 'r')
+            ax1.set_ylabel('Cumulative distribution')
+            ax1.set_ylim([0, 1])
+            ax1.set_xlabel('Log of downlink rates (bits/sec)', color='b')
         
-            self.ax2.plot(zar, yar, 'g', self.first_zar, yar, '#ffa500')
-            self.ax2.set_xlabel('Log of SINR', color='g')
+            ax2.plot(zar, yar, 'g', self.first_zar, yar, '#ffa500')
+            ax2.set_xlabel('Log of SINR', color='g')
     
-        self.fig = plt.figure(figsize=[20,15])
-        self.ax1 = self.fig.add_subplot(1,1,1)
-        self.ax2 = self.ax1.twiny()
-        ani = animation.FuncAnimation(self.fig, go_frame_go)
+        fig = plt.figure(figsize=[20,15])
+        ax1 = fig.add_subplot(1,1,1)
+        ax2 = ax1.twiny()
+        ani = animation.FuncAnimation(fig, go_frame_go)
         plt.show()
