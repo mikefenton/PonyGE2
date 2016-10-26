@@ -6,11 +6,9 @@
 # Copyright (c) 2014
 # Michael Fenton
 
-from random import seed, getstate, setstate
-from sys import platform
+from random import seed
 import matplotlib.pyplot as plt
 plt.rc('font', family='Times New Roman')
-from datetime import datetime
 import numpy as np
 
 from networks.plotting.CDF import save_CDF
@@ -23,6 +21,7 @@ from networks.run_frames import run_baseline_frame, run_benchmark_frame, \
     run_evolved_frame
 from networks.network_statistics import stats, get_comparison_stats
 from networks.plotting.CDF import CDFs
+from networks.set_network_parameters import update_network
 
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -170,8 +169,6 @@ class Optimise_Network():
     def run_all(self):
         """run all functions in the class"""
 
-        state = getstate()
-
         # original seed is 13
         seed(self.seed)
         np.random.seed(self.seed)
@@ -185,17 +182,13 @@ class Optimise_Network():
             self.iteration = self.scenario + frame
             self.users = self.user_scenarios[frame]
 
-            # self.reset_to_zero()
-            # self.update_network(FIST=True)
-            # answers = self.run_full_frame(first=True, two=self.PRINT)
-
             if self.BENCHMARK:
-                if self.FAIR:
+                if params['FAIR']:
                     self = balance_network(self)
                 else:
                     self = set_benchmark_pb(self)
-                    self.update_network()
-                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
+                    self = update_network(self)
+                self = run_evolved_frame(self)
 
             elif self.ALL_TOGETHER:
                 # If we're evolving everything together then we don't need to
@@ -223,25 +216,23 @@ class Optimise_Network():
 
             else:
                 # Just the fitness from the scheduling algorithm
-                self.ALL_TOGETHER = True
-                self.SCHEDULING = False
-
-                # self.balance_network()
 
                 self.BENCHMARK_ABS = True
-                self = set_benchmark_pb(self)
-                self.update_network(FIST=True)
+                
+                self = run_baseline_frame(self)
+                
+                self = update_network(self)
+                
+                self = run_evolved_frame(self)
 
-                answers = self.run_full_frame(first=True, two=self.PRINT, three=self.SAVE)
-                self.SCHEDULING = True
-                self.update_network()
-                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
                 self.ALL_TOGETHER = False
 
-            if self.SHOW or self.SAVE:
+            if params['SHOW'] or params['SAVE']:
+                # Show CDF plot
                 self.save_CDF_plot("Scheduling_"+str(frame), SHOW=self.SHOW, SAVE=self.SAVE)
 
             if params['MAP']:
+                # Save heatmap
                 heatmaps.save_heatmap(self, "Optimised")
 
             if stats['ave_improvement_R'] == 0 or stats['ave_improvement_R'] < -5:

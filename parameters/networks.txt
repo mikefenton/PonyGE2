@@ -27,7 +27,7 @@ DIFFICULTY:            3
 HOLD_NETWORK:          True
 N_SMALL_TRAINING:      30
 N_SMALL_TEST:          30
-TEST_DATA:             False
+TEST_DATA:             True
 SCENARIO:              0
 ITERATIONS:            10
 N_USERS:               1260
