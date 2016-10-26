@@ -64,7 +64,7 @@ def main():
         PCN.standalone_scheduler = standalone_scheduler.Standalone_Fitness()
         
         # We can pre-compute the network stats to schedule really fast.
-        PCN.standalone_scheduler.save_pre_compute_scenarios(PCN.standalone_scheduler.OPT)
+        PCN.save_pre_compute_scenarios(PCN.standalone_scheduler.OPT)
 
 
 def generate_save_folder(TIME_STAMP):

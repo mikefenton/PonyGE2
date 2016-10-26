@@ -68,6 +68,9 @@ def save_pre_compute_scenarios(self):
         self.BENCHMARK_ABS = True
         self = set_benchmark_pb(self)
         self = update_network(self)
+        
+        # Use baseline scheduling
+        self.BASELINE_SCHEDULING = True
         self = run_full_frame(self, first=True)
         
         self.PRE_COMPUTE = True

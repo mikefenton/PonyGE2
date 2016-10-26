@@ -8,7 +8,7 @@ from utilities.fitness.math_functions import ave
 from networks.plotting import heatmaps
 from networks.math_functions import return_percent
 from algorithm.parameters import params
-from networks.network_statistics import stats
+from networks.network_statistics import stats, stats_lists
 from networks.plotting.generalisation import plot_generalisation
 
 
@@ -26,28 +26,28 @@ def get_average_performance(self):
                  self.benchmark_downlinks[SC_UEs])]
     downs = downlink_difference[SC_UEs]
     
-    self.max_downs_list.append(max(downs))
-    self.max_perks_list.append(max(perks))
-    self.downlink_5_list.append(stats['diff_5'])
-    self.downlink_50_list.append(stats['diff_50'])
-    self.SLR_difference_list.append(stats['diff_SLR'])
-    self.SLR_difference_list_2.append(stats['orig_SLR'])
-    # self.SLR_difference_list_3.append(stats['opt_SLR'])
+    stats_lists['max_downs_list'].append(max(downs))
+    stats_lists['max_perks_list'].append(max(perks))
+    stats_lists['downlink_5_list'].append(stats['diff_5'])
+    stats_lists['downlink_50_list'].append(stats['diff_50'])
+    stats_lists['SLR_difference_list'].append(stats['diff_SLR'])
+    stats_lists['SLR_difference_list_2'].append(stats['orig_SLR'])
+    # stats_lists['SLR_difference_list_3'].append(stats['opt_SLR'])
     
     print("Average max downlink improvement over benchmark:  ",
-          np.average(self.max_downs_list))
+          np.average(stats_lists['max_downs_list']))
     print("Average max percentage improvement over benchmark:",
-          np.average(self.max_perks_list))
+          np.average(stats_lists['max_perks_list']))
     
     print("Average 5th percentile improvement:",
-          np.average(self.downlink_5_list))
+          np.average(stats_lists['downlink_5_list']))
     print("Average 50th percentile improvement:",
-          np.average(self.downlink_50_list))
+          np.average(stats_lists['downlink_50_list']))
     
     print("Average Sum(Log(R)) improvement over baseline:",
-          np.average(self.SLR_difference_list_2))
+          np.average(stats_lists['SLR_difference_list_2']))
     print("Average Sum(Log(R)) improvement over benchmark:",
-          np.average(self.SLR_difference_list))
+          np.average(stats_lists['SLR_difference_list']))
 
     for cell in self.small_cells:
         orig = cell['first_log_R']

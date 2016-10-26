@@ -45,7 +45,13 @@ stats_lists = {"improvement_R_list": [],
                "improvement_DL5_list": [],
                "improvement_DL50_list": [],
                "downlink_5_list": [],
-               "downlink_50_list": []}
+               "downlink_50_list": [],
+               "helpless_UEs": [],
+               "max_downs_list": [],
+               'max_perks_list': [],
+               "SLR_difference_list": [],
+               "SLR_difference_list_2": [],
+               "SLR_difference_list_3": []}
 
 
 def get_comparison_stats():
@@ -242,14 +248,14 @@ def get_user_statistics(self, FIRST=False):
     log_average_SINRs[log_average_SINRs == -np.inf] = 0
     
     if params['SHOW'] or params['SAVE']:
-        if self.CDF_log:
+        if params['CDF_log']:
             CDFs['CDF_downlink'] = (log_average_downlinks).tolist()
             CDFs['CDF_downlink'].extend(
                 [0 for _ in average_downlinks[average_downlinks == 0]])
         else:
             CDFs['CDF_downlink'] = (average_downlinks / 1024 / 1024).tolist()
     
-        if self.CDF_log:
+        if params['CDF_log']:
             CDFs['CDF_SINR'] = (log_average_SINRs).tolist()
         else:
             CDFs['CDF_SINR'] = (average_SINRs).tolist()

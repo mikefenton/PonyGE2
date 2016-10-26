@@ -57,11 +57,11 @@ def mane():
     params['TEST_DATA'] = False
     params['PRE_COMPUTE'] = False
     params['SCENARIO'] = 10
-    params['ITERATIONS'] = 100
+    params['ITERATIONS'] = 10
     params['N_SMALL_TRAINING'] = 30
     params['REALISTIC'] = True
     params['N_USERS'] = 1260  # 5000
-    params['SHOW'] = True
+    params['SHOW'] = False
     params['SAVE'] = False
     params['PRINT'] = True
     params['MAP'] = False
