@@ -1,8 +1,10 @@
 from __future__ import division
-# from deap import creator, base, tools, algorithms
-from copy import copy
-import numpy as np
+
 import random
+from copy import copy
+
+import numpy as np
+
 
 def pdiv(a, b):
     """ Protected division operator to prevent division by zero"""

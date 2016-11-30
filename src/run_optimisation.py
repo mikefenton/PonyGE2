@@ -1,10 +1,11 @@
-import random, sys, getopt
+import getopt
+import random
+import sys
+from datetime import datetime
 
-from networks.comparisons import output_final_average_performance
 from algorithm.parameters import params, load_params
 from networks import setup_run
-from datetime import datetime
-from networks import visualise_schedule
+from networks.comparisons import output_final_average_performance
 
 random.seed(10)
 scheduling = {}
@@ -58,13 +59,13 @@ def mane():
     params['PRE_COMPUTE'] = False
     params['SCENARIO'] = 10
     params['ITERATIONS'] = 10
-    params['N_SMALL_TRAINING'] = 30
+    params['N_SMALL_TRAINING'] = 79
     params['REALISTIC'] = True
     params['N_USERS'] = 1260  # 5000
     params['SHOW'] = False
-    params['SAVE'] = False
+    params['SAVE'] = True
     params['PRINT'] = True
-    params['MAP'] = False
+    params['MAP'] = True
     params['FAIR'] = False
     params['COLLECT_STATS'] = True
     params['TIME_STAMP'] = generate_time_stamp()
@@ -134,10 +135,10 @@ def mane():
             BENCHMARK=BENCHMARK)
         fitness = network.run_all_2()
         output_final_average_performance(network)
-        if params['SAVE']:
-
-            visualise_schedule.mane(params['FILE_PATH'] +
-                                    "Heatmaps/", params['TIME_STAMP'])
+        # if params['SAVE']:
+        #
+        #     visualise_schedule.mane(params['FILE_PATH'] +
+        #                             "Heatmaps/", params['TIME_STAMP'])
 
         if network.difference:
             print("Performance differential:", fitness)

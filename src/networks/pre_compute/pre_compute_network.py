@@ -1,10 +1,11 @@
 from copy import deepcopy
 from random import seed
+
 import numpy as np
 
-from networks.set_power_bias import set_benchmark_pb
-from networks.set_network_parameters import update_network
 from networks.run_frames import run_full_frame
+from networks.set_network_parameters import update_network
+from networks.set_power_bias import set_benchmark_pb
 
 pre_computed_network = []
 standalone_scheduler = []

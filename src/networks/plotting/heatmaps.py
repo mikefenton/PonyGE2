@@ -1,6 +1,8 @@
-import numpy as np
 from copy import deepcopy
+
 import matplotlib.pyplot as plt
+import numpy as np
+
 plt.rc('font', family='Times New Roman')
 
 from algorithm.parameters import params
@@ -10,8 +12,8 @@ def save_heatmap(self, iteration):
     """ Saves a heatmap of the overall state of the network based on cell
         gains, powers, and biases. Includes delineated boundaries and UEs.
     """
-    total_heatmap = None
-    masks = []
+
+    self.masks = []
     
     gain_copy = deepcopy(self.gains)
     power_copy = deepcopy(self.gains)

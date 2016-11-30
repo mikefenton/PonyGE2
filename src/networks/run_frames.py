@@ -1,13 +1,13 @@
+import numpy as np
+
+from algorithm.parameters import params
 from networks.get_downlink import get_basic_downlink
-from networks.scheduling import set_scheduling
-from utilities.fitness.math_functions import pdiv
-from networks.set_power_bias import set_benchmark_pb
-from networks.set_network_parameters import update_network
 from networks.network_statistics import get_user_statistics, generate_stats, stats
 from networks.plotting.CDF import CDFs
-from algorithm.parameters import params
-
-import numpy as np
+from networks.scheduling import set_scheduling
+from networks.set_network_parameters import update_network
+from networks.set_power_bias import set_benchmark_pb
+from utilities.fitness.math_functions import pdiv
 
 
 def run_baseline_frame(self):

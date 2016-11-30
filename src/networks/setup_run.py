@@ -1,5 +1,5 @@
-from time import sleep
 from os import path, mkdir, getcwd
+from time import sleep
 
 from algorithm.parameters import params
 from networks.pre_compute import pre_compute_network as PCN

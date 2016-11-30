@@ -1,11 +1,12 @@
-from operator import itemgetter
 from copy import deepcopy
+from operator import itemgetter
+
 import numpy as np
 
-from utilities.fitness.math_functions import pdiv
 from algorithm.parameters import params
 from networks.math_functions import return_percent
 from networks.pre_compute import pre_compute_network as PCN
+from utilities.fitness.math_functions import pdiv
 
 
 class Standalone_Fitness:

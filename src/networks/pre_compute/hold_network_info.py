@@ -1,5 +1,6 @@
-from algorithm.parameters import params
 from os import path, getcwd
+
+from algorithm.parameters import params
 
 
 def init(simulation, set="test"):

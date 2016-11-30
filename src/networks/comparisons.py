@@ -1,7 +1,9 @@
-import numpy as np
-from os import getcwd
 from copy import deepcopy
+from os import getcwd
+
 import matplotlib.pyplot as plt
+import numpy as np
+
 plt.rc('font', family='Times New Roman')
 
 from utilities.fitness.math_functions import ave

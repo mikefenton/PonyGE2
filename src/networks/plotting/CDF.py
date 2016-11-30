@@ -1,6 +1,7 @@
-from matplotlib.ticker import FormatStrFormatter, LogLocator
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import FormatStrFormatter, LogLocator
+
 plt.rc('font', family='Times New Roman')
 
 from algorithm.parameters import params

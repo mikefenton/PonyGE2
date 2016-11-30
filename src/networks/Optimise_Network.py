@@ -7,7 +7,9 @@
 # Michael Fenton
 
 from random import seed
+
 import matplotlib.pyplot as plt
+
 plt.rc('font', family='Times New Roman')
 import numpy as np
 
@@ -271,7 +273,7 @@ class Optimise_Network():
             get_comparison_stats()
 
             if params['MAP']:
-                heatmaps.save_heatmap(self, "Optimised")
+                heatmaps.save_heatmap(self, self.iteration)
 
             if stats['ave_improvement_R'] == 0 or stats['ave_improvement_R'] < -5:
                 # no point checking other scenarios this guy does nothing
@@ -298,9 +300,10 @@ class Optimise_Network():
                      "Evolved": CDFs['ave_CDF_evolved'],
                      "Benchmark": CDFs['ave_CDF_benchmark']}
 
+            # Save CDF Plots.
             save_CDF("CDF", plots)
-            save_CDF(plot_name, plots, part="bottom")
-            save_CDF(plot_name, plots, part="top")
+            save_CDF(plot_name + "_bottom", plots, part="bottom")
+            save_CDF(plot_name + "_top", plots, part="top")
 
         return stats['ave_improvement_R']
 

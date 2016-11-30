@@ -1,14 +1,14 @@
-from math import floor, ceil
-from numpy import mean
-from operator import itemgetter
 from copy import copy
+from math import floor, ceil
+from operator import itemgetter
+
 import numpy as np
+from numpy import mean
 
-from utilities.fitness.math_functions import ave
-from networks.math_functions import return_percent
 from algorithm.parameters import params
+from networks.math_functions import return_percent
 from networks.plotting.CDF import CDFs
-
+from utilities.fitness.math_functions import ave
 
 stats = {"SINR5": None,
          "DL5": None,

@@ -1,10 +1,11 @@
-import numpy as np
-from operator import itemgetter
 from copy import copy, deepcopy
+from operator import itemgetter
+
+import numpy as np
 import scipy.io as io
 
 from algorithm.parameters import params
-from utilities.fitness.math_functions import pdiv
+from utilities.fitness.math_functions import pdiv, plog, psqrt
 
 
 def set_scheduling(self, METHOD="baseline"):

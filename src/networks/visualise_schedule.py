@@ -1,7 +1,9 @@
 from os import listdir, getcwd
 from subprocess import call
-import scipy.io as io
+
 import matplotlib
+import scipy.io as io
+
 matplotlib.use('Agg')
 import pylab as pl
 import numpy as np

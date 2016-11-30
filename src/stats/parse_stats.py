@@ -1,10 +1,12 @@
-from os import getcwd, listdir
-from datetime import datetime
-import pandas as pd
-import numpy as np
-import matplotlib
 import getopt
 import sys
+from datetime import datetime
+from os import getcwd, listdir
+
+import matplotlib
+import numpy as np
+import pandas as pd
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.rc('font', family='Times New Roman')

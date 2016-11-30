@@ -1,9 +1,9 @@
 import numpy as np
 import numpy.ma as ma
 
-from networks.scheduling import set_scheduling
-from networks.reset import clear_memory
 from algorithm.parameters import params
+from networks.reset import clear_memory
+from networks.scheduling import set_scheduling
 
 
 def set_users(self):
