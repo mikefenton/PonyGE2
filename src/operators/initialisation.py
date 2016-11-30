@@ -7,15 +7,22 @@ from representation.tree import Tree, generate_tree
 from utilities.representation.python_filter import python_filter
 
 
-def random_init(size):
+def sample_genome():
+    # Generate a random genome, uniformly
+    genome = [randint(0, params['CODON_SIZE']) for _ in
+              range(params['MAX_INIT_GENOME_LENGTH'])]
+    return genome
+
+
+def uniform_genome(size):
     """
-    Randomly create a population of size and return.
+    Create a population of individuals by sampling genomes uniformly.
 
     :param size: The size of the required population.
     :return: A full population composed of randomly generated individuals.
     """
 
-    return [individual.Individual(None, None) for _ in range(size)]
+    return [individual.Individual(sample_genome(), None) for _ in range(size)]
 
 
 def rhh(size):
@@ -36,7 +43,8 @@ def rhh(size):
         # If the population size is too small, can't use RHH initialisation.
         print("Error: population size too small for RHH initialisation.")
         print("Returning randomly built trees.")
-        return [individual.Individual(None, None) for _ in range(size)]
+        return [individual.Individual(sample_genome(), None)
+                for _ in range(size)]
 
     elif not depths:
         # If we have no depths to ramp from, then params['MAX_INIT_DEPTH'] is
@@ -71,13 +79,13 @@ def rhh(size):
 
                 # Generate individual using "Grow"
                 ind = generate_ind_tree(depth, "random")
-            
+
                 # Append individual to population
                 population.append(ind)
 
                 # Generate individual using "Full"
                 ind = generate_ind_tree(depth, "full")
-                
+
                 # Append individual to population
                 population.append(ind)
 
@@ -103,7 +111,7 @@ def rhh(size):
             population.append(ind)
 
         return population
-    
+
 
 def generate_ind_tree(max_depth, method):
     """
@@ -115,7 +123,7 @@ def generate_ind_tree(max_depth, method):
     """
 
     # Initialise an instance of the tree class
-    ind_tree = Tree(str(params['BNF_GRAMMAR'].start_rule[0]), None,
+    ind_tree = Tree(str(params['BNF_GRAMMAR'].start_rule["symbol"]), None,
                     depth_limit=max_depth - 1)
 
     # Generate a tree

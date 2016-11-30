@@ -2,9 +2,9 @@
 #Introduction
 ------------
 
-Grammatical evolution (GE) is a population-based evolutionary algorithm,
-where a formal BNF-style grammar is used in the genotype to phenotype 
-mapping process.
+Grammatical evolution (GE) is a population-based evolutionary
+algorithm, where a BNF-style grammar is used in the genotype to
+phenotype mapping process.
 
 PonyGE2 is an implementation of GE in Python. It's intended as an advertisement
 and a starting-point for those new to GE, a reference for students and
@@ -32,8 +32,8 @@ PonyGE2 is copyright (C) 2009-2016
 #Requirements
 ------------
 
-PonyGE runs under Python 3.x.
-Using matplotlib, numpy, scipy, scikit-learn (sklearn), pandas
+PonyGE requires Python 3.5 or higher.
+Using matplotlib, numpy, scipy, scikit-learn (sklearn), pandas.
 
 All requirements can be satisfied with Anaconda.
 
@@ -77,6 +77,32 @@ to activate them.
 
 #Evolutionary Parameters:
 ------------------------
+
+One of the central components of PonyGE is the `algorithm.parameters.params`
+dictionary. This dictionary is referenced throughout the entire program and
+is used to streamline the whole process by keeping all optional parameters
+in the one place. This also means that there is little to no need for arguments
+to the various functions in PonyGE, as these arguments can often be read 
+directly from the parameters dictionary. Furthermore, the parameters dictionary
+is used to specify and store optional functions such as `initialisation`, 
+`crossover`, `mutation`, and `replacement`.
+
+There are three different ways to specify operational parameters with PonyGE.
+
+1. The first and most basic method is to modify the algorithm.parameters.params dictionary directly in the code.
+2. The second method is to list your desired parameters in a specialised parameters text file. Example parameters files are located in the parameters folder. When using parameters files, it is necessary to specify the desired parameter file from the command line. This is done by calling
+
+        --parameters [FULL FILE NAME INCLUDING EXTENSION]
+    
+3. The third and final method is to list all desired parameters from the command line. To see a list of all currently available command-line arguments implemented in the parser, type
+
+        $ python ponyge.py --help
+    
+*__NOTE__ that each of the above three options successively supersedes the*
+*previous ones, i.e. parameters specified in a paremeters file will over-write*
+*those set in the original* `algorithm.parameters.params` *dictionary, and*
+*parameters set from the command line will over-write those set in the*
+*parameters file.*
 
 PonyGE2 automatically parses the correct path for all operators, meaning you
 don't have to specify the full direct path but only the name of the desired
@@ -144,19 +170,68 @@ grammar.
 
 ####Random
 
-Activate with:
+To generate individuals from initialised genomes, the only option currently
+implemented is to generate random genome strings. Thus, if you specify
 
     --genome_init
+    
+at the command line, PonyGE will automatically initialise individuals using
+randomly generated genome strings. If you are using this option, there is no
+need to specify any `--initialisation` argument directly.
+
+*__NOTE__ that random genome initialisation in Grammatical Evolution should*
+*be used with caution as poor grammar design can have a negative impact on*
+*the quality of randomly initialised solutions due to the inherent bias*
+*capabilities of GE [Fagan et al., 2016; Nicolau & Fenton, 2016].*
 
 ###Subtree
 
+If using subtree initialisation, there are two options for generating 
+individuals. You can either initialise a population of random subtrees,
+or you can use various "smart" initialisation methods implemented here.
+
 ####Random
+
+Random subtree initialisation generates individuals by randomly building
+derivation trees up to the specified maximum initialisation depth limit.
 
 Activate with:
 
     --initialisation random_init
+    
+*__NOTE__ that initialisation techniques use derivation tree methods by*
+*default. It is only necessary to specify the type of individual with which*
+*initialisation is to be run (e.g. genome or derivation tree) if you want*
+*to use genome-based methods.*
+
+*__NOTE__ that there is no obligation that randomly generated derivation*
+*trees will extend to the depth limit; they will be of random size*
+*[Fagan et al., 2016].*
+
+*__NOTE__ that randomly generated derivation trees will have a tendency*
+*towards smaller tree sizes [Fagan et al., 2016].*
 
 ####Ramped Half-Half
+
+Ramped Half-Half initialisation in Grammatical Evolution is often called
+"Sensible Initialisation" [Ryan and Azad, 2003]. Sensible Initialisation 
+follows traditional GP Ramped Half-Half initialisation by initialising a 
+population of individuals using two separate methods: `Full` and `Grow`.
+
+`Full` initialisation generates a derivation tree where all branches extend
+to the specified depth limit. This tends to generate very bushy, evenly 
+balanced trees [Fagan *et al.*, 2016].
+
+`Grow` initialisation generates a randomly built derivation tree where no
+branch extends *past* the depth limit.
+
+*__NOTE__ that `Grow` is analogous to random derivation tree initialisation.*
+
+RHH initialisation generates pairs of solutions generated by both methods
+for a range of depths, up to a specified initialisation depth limit. This is
+known as "ramping". In PonyGE, ramping begins at a depth where sufficient
+unique solutions can be generated for the number of required solutions at
+that depth [Nicolau & Fenton, 2016].
 
 Activate with:
 
@@ -165,6 +240,9 @@ Activate with:
 ##Selection
 ---------
 
+The selection process is a key step in Evolutionary Algorithms.
+
+The mapping process in Grammatical Evolution can generate "invalid" individuals.
 Only valid individuals are selected by default. However, this can be changed
 with the flag:
 
@@ -208,6 +286,32 @@ probability of crossover occurring is set with the flag:
 where `[NUM]` is a float between 0 and 1. The default value for crossover is
 0.75.
 
+####Fixed Onepoint
+
+Activate with:
+
+    --crossover fixed_onepoint
+
+Given two individuals, create two children using fixed one-point crossover and return
+them. The same point is selected on both genomes for crossover to occur.
+This means that genomes will always remain the same length (as long as 
+int_flip mutation is used). Crossover points are selected within the 
+used portion of the genome by default (i.e. crossover does not occur in 
+the tail of the individual).
+
+####Fixed Twopoint
+
+Activate with:
+
+    --crossover fixed_twopoint
+
+Given two individuals, create two children using fixed two-point crossover and return
+them. The same points are selected on both genomes for crossover to occur.
+This means that genomes will always remain the same length (as long as 
+int_flip mutation is used). Crossover points are selected within the 
+used portion of the genome by default (i.e. crossover does not occur in 
+the tail of the individual).
+
 ####Variable Onepoint
 
 Activate with:
@@ -223,24 +327,23 @@ default (i.e. crossover does not occur in the tail of the individual).
 *__NOTE__ that variable onepoint crossover can cause individuals to grow*
 *, leading to bloat.*
 
-For a more in-depth discussion on onepoint crossover in Grammatical Evolution,
-see the list of references at the end of this document.
-
-####Fixed Onepoint
+####Variable Twopoint
 
 Activate with:
 
-    --crossover fixed_onepoint
+    --crossover variable_twopoint
 
-Given two individuals, create two children using fixed one-point crossover and return
-them. The same point is selected on both genomes for crossover to occur.
-This means that genomes will always remain the same length (as long as 
-int_flip mutation is used). Crossover points are selected within the 
-used portion of the genome by default (i.e. crossover does not occur in 
-the tail of the individual).
+Given two individuals, create two children using variable two-point 
+crossover and return them. Two different points are selected on each genome 
+for crossover to occur. This allows genomes to grow or shrink in length.
+Crossover points are selected within the used portion of the genome by 
+default (i.e. crossover does not occur in the tail of the individual).
 
-For a more in-depth discussion on onepoint crossover in Grammatical Evolution,
-see the list of references at the end of this document.
+*__NOTE__ that variable onepoint crossover can cause individuals to grow*
+*, leading to bloat.*
+
+For a more in-depth discussion on crossover in Grammatical Evolution,
+see [O'Neill *et al.*, 2003].
 
 ####Subtree
 
@@ -362,18 +465,8 @@ Activate with:
 
     --mutate_duplicates
 
-Finally, it could be said that using a cache to lookup the fitness of duplicate
-individuals deprives the evolutionary algorithm of potential fitness
-evaluations, thus leading to a reduced overall number of fitness evaluations
-over the course of an evolutionary run. If desired, it is possible to run
-PonyGE for a specified total number of fitness evaluations rather than
-for a specified number of total generations. This can be activated with the
-flag:
-
-    --complete_evals
-
-With this specified, PonyGE will run until the length of the cache reaches
-`params['POPULATION_SIZE']` * `params['GENERATIONS']`.
+*__NOTE__ that the various caching options are __mutually exclusive__.*
+*For example, you cannot specify* `--mutate_duplicates` *with* `--lookup_bad_fitness`.
 
 ##Replacement
 -----------
@@ -405,10 +498,10 @@ Activate with:
 ##Writing Grammars
 
 Grammars are written in Backus-Naur form, aka BNF. See the examples in
-src/grammars. Each rule is composed of a left-hand side (a single
-non-terminal), followed by the "goes-to" symbol `::=`, followed by a list of
-productions separated by the "or" symbol `|`. Non-terminals are enclosed by
-angle brackets `<>`. For example:
+grammars. Each rule is composed of a left-hand side (a single
+non-terminal), followed by the "goes-to" symbol `::=`, followed by a
+list of productions separated by the "or" symbol `|`. Non-terminals
+are enclosed by angle brackets `<>`. For example:
 
     <a> ::= <b>c | d
 
@@ -416,14 +509,29 @@ You can use an "or" symbol or angle bracket in a production. Escape it
 using a backslash: `\|, \<, \>`. You can use the "goes-to" symbol in a
 production without escaping it.
 
+A useful special case is available when writing grammars: a production
+can be given as `GE_RANGE:4`, for example, and this will be replaced
+by a set of productions: `0 | 1 | 2 | 3`. With
+`GE_RANGE:dataset_n_vars`, the number of productions will be set by
+the number of columns in the file given by the `--dataset` argument,
+if any. Using grammar productions like the following, we can avoid
+hard-coding the number of independent variables in the grammar:
+
+```
+<var> ::= x[<varidx>]
+<varidx> ::= GE_RANGE:dataset_n_vars
+```
+
+See `grammars/supervised_learning.bnf` for a full example.
+
 Along with the fitness function, grammars are one of the most problem-specific
 components of the PonyGE2 algorithm. The performance of PonyGE2 can be vastly
 affected by the quality of the grammar used.
 
-All grammars are stored in the src/grammars folder. Grammars can be set with
-the flag:
+All grammars are stored in the grammars folder. Grammars can be set
+with the flag:
 
-    --bnf_grammar [FILE_NAME.bnf]
+    --grammar_file [FILE_NAME.bnf]
 
 *__NOTE__ that the full file extension (e.g. ".bnf") must be specified.*
 
@@ -477,11 +585,12 @@ useful information.
 
 ######FIXME Need to finalise a suite of problems for PonyGE2
 
-Three example problems are currently provided:
+Four example problems are currently provided:
 
 1. String-match
 2. Regression
 3. Classification
+4. Integer sequence match
 
 A brief description is given below of each problem, along with the 
 command-line arguments necessary to call each problem.
@@ -500,9 +609,9 @@ is to match a target word.
 To use it, specify the following command-line arguments:
 
     --fitness_function string_match
-    --target_string [TYPE_TARGET_STRING]
+    --target [TYPE_TARGET_STRING]
 
-e.g. `--target_string golden, --target_string ponyge_rocks`
+e.g. `--target golden, --target ponyge_rocks`
 
 Alternatively, you can specify a direct parameters file with:
 
@@ -552,6 +661,25 @@ Alternatively, you can specify a direct parameters file with:
     --parameters classification.txt
 
 
+##Integer sequence match
+------------------------
+
+In the sequence-match problem, we're given an integer sequence target,
+say [0, 5, 0, 5, 0, 5], and we try to synthesize a program (loops,
+if-statements, etc) which will *yield* that sequence, one item at a
+time. There are several components to the provided fitness function,
+which are weighted by numerical parameters. We can specify the target
+sequence and weights using parameters on the command line or in a
+parameters file.
+
+To try this problem, use command-line arguments similar to the following:
+
+    --fitness_function sequence_match
+	--grammar_file sequence_match.pybnf
+	--target "[0, 5, 0, 5, 0, 5]"
+	--extra_fitness_parameters "alpha=0.5, beta=0.5, gamma=0.5"
+	
+
 #Adding New Problems
 --------------------
 
@@ -568,6 +696,9 @@ _config files._
 You simply need to write a **new fitness function** (if you don't want to use
 one already there) and add a **new grammar file**. You may also need to add a
 **new dataset** if you're using datasets.
+
+_**NOTE** that it may be beneficial to create a **new paremeters file**_
+_for any new problem._
 
 ##Fitness Functions
 
@@ -589,7 +720,7 @@ where `[FIT_FUNC_NAME]` is the name of the fitness function class.
 
 Grammar files can be specified from the command line with the flag:
 
-    --bnf_grammar [GRAMMAR_FILE]
+    --grammar_file [GRAMMAR_FILE]
 
 where `[GRAMMAR_FILE]` is the name of the grammar file.
 
@@ -705,3 +836,15 @@ GEVA: http://ncra.ucd.ie/Site/GEVA.html
 O'Neill, M., Ryan, C., Keijzer, M. and Cattolico, M., 2003. "Crossover in
 grammatical evolution." Genetic programming and evolvable machines, 4(1),
 pp.67-93. DOI: 10.1023/A:1021877127167
+
+Ryan, C. and Azad, R.M.A., 2003. "Sensible initialisation in grammatical 
+evolution." In Proceedings of the Bird of a Feather Workshops, Genetic 
+and Evolutionary Computation Conference (GECCO 2003), pp. 142-145.
+
+Fagan, D., Fenton, M. and O'Neill, M., 2016. "Exploring Position Independent 
+Initialisation in Grammatical Evolution." IEEE Congress on Evolutionary 
+Computation, Vancouver, Canada. IEEE Press.
+
+Nicolau, M. and Fenton, M., 2016. "Managing Repitition in Grammar-based 
+Genetic Programming." ACM GECCO 2016 Proceedings of the Genetic and 
+Evolutionary Computation Conference, Denver, Colorado, USA.

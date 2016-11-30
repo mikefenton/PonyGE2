@@ -257,16 +257,18 @@ def generate_tree(tree, genome, output, method, nodes, depth, max_depth,
     productions = params['BNF_GRAMMAR'].rules[tree.root]
     
     # Find which productions can be used based on the derivation method.
-    available = legal_productions(method, depth_limit, productions)
+    available = legal_productions(method, depth_limit, tree.root,
+                                  productions['choices'])
     
-    # Pick a production choice.
+    # Randomly pick a production choice.
     chosen_prod = choice(available)
 
     # Find the index of the chosen production and set a matching codon based
     # on that index.
-    prod_index = productions.index(chosen_prod)
-    codon = randrange(len(productions), params['BNF_GRAMMAR'].codon_size,
-                      len(productions)) + prod_index
+    prod_index = productions['choices'].index(chosen_prod)
+    codon = randrange(productions['no_choices'],
+                      params['BNF_GRAMMAR'].codon_size,
+                      productions['no_choices']) + prod_index
     
     # Set the codon for the current node and append codon to the genome.
     tree.codon = codon
@@ -275,18 +277,18 @@ def generate_tree(tree, genome, output, method, nodes, depth, max_depth,
     # Initialise empty list of children for current node.
     tree.children = []
 
-    for symbol in chosen_prod:
+    for symbol in chosen_prod['choice']:
         # Iterate over all symbols in the chosen production.
-        if symbol[1] == params['BNF_GRAMMAR'].T:
+        if symbol["type"] == "T":
             # The symbol is a terminal. Append new node to children.
-            tree.children.append(Tree(symbol[0], tree))
+            tree.children.append(Tree(symbol["symbol"], tree))
             
             # Append the terminal to the output list.
-            output.append(symbol[0])
+            output.append(symbol["symbol"])
         
-        elif symbol[1] == params['BNF_GRAMMAR'].NT:
+        elif symbol["type"] == "NT":
             # The symbol is a non-terminal. Append new node to children.
-            tree.children.append(Tree(symbol[0], tree))
+            tree.children.append(Tree(symbol["symbol"], tree))
             
             # Recurse on the new node.
             genome, output, nodes, d, max_depth = \
@@ -302,60 +304,83 @@ def generate_tree(tree, genome, output, method, nodes, depth, max_depth,
         nodes += 1
 
     if depth > max_depth:
+        # Set new maximum depth
         max_depth = depth
 
     return genome, output, nodes, depth, max_depth
 
 
-def legal_productions(method, depth_limit, productions):
-    """ Returns the available production choices for a node given a depth
-        limit """
+def legal_productions(method, depth_limit, root, productions):
+    """
+    Returns the available production choices for a node given a specific
+    depth limit.
     
+    :param method: A string specifying the desired tree derivation method.
+    Current methods are "random" or "full".
+    :param depth_limit: The overall depth limit of the desired tree.
+    :param root: The root of the current node.
+    :param productions: The full list of production choices from the current
+    root node.
+    :return: The list of available production choices based on the specified
+    derivation method.
+    """
+    
+    # Get all information about root node
+    root_info = params['BNF_GRAMMAR'].non_terminals[root]
+    
+    # Initialise empty list of available production choices.
     available = []
     
     if method == "random":
+        # Randomly build a tree.
+        
         if depth_limit > params['BNF_GRAMMAR'].max_arity:
+            # If the depth limit is greater than the maximum arity of the
+            # grammar, then any production choice can be used.
             available = productions
+
         elif depth_limit <= 0:
-            min_path = min([max([item[2] for item in prod]) for
-                            prod in productions])
-            shortest = [prod for prod in productions if
-                        max([item[2] for item in prod]) == min_path]
-            available = shortest
+            # If we have already surpassed the depth limit, then list the
+            # choices with the shortest terminating path.
+            available = root_info['min_path']
+        
         else:
-            for prod in productions:
-                prod_depth = max([item[2] for item in prod])
-                if prod_depth < depth_limit:
-                    available.append(prod)
+            # The depth limit is less than the maximum arity of the grammar.
+            # We have to be careful in selecting available production
+            # choices lest we generate a tree which violates the depth limit.
+            available = [prod for prod in productions if prod['max_path'] <
+                         depth_limit]
+            
             if not available:
-                min_path = min([max([item[2] for item in prod]) for
-                                prod in productions])
-                shortest = [prod for prod in productions if
-                            max([item[2] for item in prod]) == min_path]
-                available = shortest
+                # There are no available choices which do not violate the depth
+                # limit. List the choices with the shortest terminating path.
+                available = root_info['min_path']
     
     elif method == "full":
+        # Build a "full" tree where every branch extends to the depth limit.
+        
         if depth_limit > params['BNF_GRAMMAR'].max_arity:
-            for production in productions:
-                if any(sym[3] for sym in production):
-                    available.append(production)
+            # If the depth limit is greater than the maximum arity of the
+            # grammar, then only recursive production choices can be used.
+            available = root_info['recursive']
+            
             if not available:
-                for production in productions:
-                    if not all(sym[3] for sym in production):
-                        available.append(production)
+                # There are no recursive production choices for the current
+                # rule. Pick any production choices.
+                available = productions
+
         else:
-            for prod in productions:
-                prod_depth = max([item[2] for item in prod])
-                if prod_depth == depth_limit - 1:
-                    available.append(prod)
+            # The depth limit is at or less than the maximum arity of the
+            # grammar. We have to be careful in selecting available production
+            # choices lest we generate a tree which violates the depth limit.
+            available = [prod for prod in productions if prod['max_path'] ==
+                         depth_limit]
+            
             if not available:
-                # Then we don't have what we're looking for
-                for prod in productions:
-                    prod_depth = 0
-                    for item in prod:
-                        if (item[1] == params['BNF_GRAMMAR'].NT) and \
-                                (item[2] > prod_depth):
-                            prod_depth = item[2]
-                    if prod_depth < depth_limit:
-                        available.append(prod)
+                # There are no available choices which extend exactly to the
+                # depth limit. List the NT choices with the longest terminating
+                # paths that don't violate the limit.
+                available = [prod for prod in productions if prod['max_path']
+                             < depth_limit]
+
     return available
