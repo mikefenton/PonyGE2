@@ -51,15 +51,10 @@ class Define_Network():
         self.total_heatmap = None
         self.perc_signal = None
         self.user_scenarios = []
+        self.hotspot_scenarios = []
         self.iterations = iterations
         self.scenario = scenario
-        self.stress_percentage = 0
-        self.STRESS_TEST = params['STRESS_TEST']
-        if self.STRESS_TEST:
-            self.stress_percentage = 0  # 25#50
-            self.seed = 17  # 4 # 6 7 9
-        else:
-            self.seed = 13
+        self.seed = 13
         np.random.seed(self.seed)
         seed(self.seed)
 
@@ -201,12 +196,15 @@ class Define_Network():
     def setup_UE_distributions(self):
         """ Set up distributions of UEs for all experiments."""
 
-        self.user_scenarios = []
-        for i in range(self.iterations):
-            self.user_scenarios.append([])
-        self.set_hotspots()
+        # Set number of hotspots.
+        third = int(self.n_small_cells / 3)
+        num_hotspots = randint(self.n_small_cells - third,
+                               self.n_small_cells + third)
+        self.set_hotspot_parameters(num_hotspots)
+        hotspots = self.set_hotspots(num_hotspots)
         self.seed += self.scenario
 
+        self.user_scenarios = []
         for i in range(self.iterations):
             if i:
                 self.seed += 1
@@ -214,55 +212,173 @@ class Define_Network():
             np.random.seed(self.seed)
             print("Generating UE location data for scenario",
                   i + self.scenario)
-            self.distribute_users(scenario=i)
-
-    def set_hotspots(self):
+            self.user_scenarios.append([])
+            self.hotspot_scenarios.append([])
+            self.set_hotspot_scenario(i, hotspots)
+    
+    def set_hotspot_parameters(self, num_hotspots):
         """ Set hotspot locations for the network.
         """
-
-        self.hotspots = []
+        
+        self.mean_n_UEs_start = np.random.uniform(
+            params['mean_n_UEs_in_HS_min'],
+            params['mean_n_UEs_in_HS_max'],
+            size=num_hotspots)
+        
+        delta_mean_n = np.random.randint(
+            -(params['mean_n_UEs_in_HS_max'] -
+              params['mean_n_UEs_in_HS_min']),
+            (params['mean_n_UEs_in_HS_max'] -
+             params['mean_n_UEs_in_HS_min']),
+            size=num_hotspots) * \
+                       np.random.uniform(0, params['dynamic_severity'],
+                                         size=num_hotspots)
+        mean_n_UEs_end = self.mean_n_UEs_start + delta_mean_n
+        
+        self.mean_n_UEs_end = np.clip(mean_n_UEs_end,
+                                      params['mean_n_UEs_in_HS_min'],
+                                      params['mean_n_UEs_in_HS_max'])
+    
+        self.sigma_n_UEs_start = np.random.uniform(
+            params['sigma_n_UEs_in_HS_min'],
+            params['sigma_n_UEs_in_HS_max'],
+            num_hotspots)
+        
+        delta_sigma = np.random.uniform(
+            -((params['sigma_n_UEs_in_HS_max'] -
+               params['sigma_n_UEs_in_HS_min'])),
+            ((params['sigma_n_UEs_in_HS_max'] -
+              params['sigma_n_UEs_in_HS_min'])),
+            size=num_hotspots) * \
+                      np.random.uniform(0, params['dynamic_severity'],
+                                        size=num_hotspots)
+        
+        sigma_n_UEs_end = self.sigma_n_UEs_start + delta_sigma
+        
+        self.sigma_n_UEs_end = np.clip(sigma_n_UEs_end,
+                                       params['sigma_n_UEs_in_HS_min'],
+                                       params['sigma_n_UEs_in_HS_max'])
+        
+        self.hotspot_size_start = np.zeros(num_hotspots)
+        self.hotspot_size_end = np.zeros(num_hotspots)
+    
+        for HS in range(num_hotspots):
+            self.hotspot_size_start[HS] = np.random.uniform(
+                params['hotspot_size_min'], params['hotspot_size_max'])
+            delta_hotspot_size = np.random.uniform(
+                -((params['hotspot_size_max'] -
+                   params['hotspot_size_min'])),
+                ((params['hotspot_size_max'] -
+                  params['hotspot_size_min']))) * np.random.uniform(
+                0, params['dynamic_severity'])
+            
+            self.hotspot_size_end[HS] = self.hotspot_size_start[
+                                            HS] + delta_hotspot_size
+    
+        self.hotspot_size_end = np.clip(self.hotspot_size_end,
+                                        params['hotspot_size_min'],
+                                        params['hotspot_size_max'])
+    
+    def set_hotspots(self, num_hotspots):
+        
+        hotspots = []
         hot_cells = []
-        third = int(self.n_small_cells/3)
-        num_hotspots = randint(self.n_small_cells-third,
-                               self.n_small_cells+third)
-
+        
         for i in range(num_hotspots):
             prob_hotspot_near_SC = random()
-            num_UEs_in_hotspot = randint(5, 20)
-
+            # num_UEs_in_hotspot = randint(5, 20)
+    
             # Place hotspot on the map
             if prob_hotspot_near_SC < 0.10:
                 # Pick a random hotspot location
                 hot_spot_location = [randint(0, self.size),
                                      randint(0, self.size)]
-
+    
             else:
                 # Pick random SC to place the hotspot near
                 if len(hot_cells) < self.n_small_cells:
                     if hot_cells:
-                        available = list(set(range(self.n_small_cells)) - set(hot_cells))
+                        available = list(
+                            set(range(self.n_small_cells)) - set(hot_cells))
                     else:
                         available = list(range(self.n_small_cells))
-                    
+            
                     # Pick a SC
                     selected_SC = choice(available)
                     hot_cells.append(selected_SC)
-                    hot_spot_location = self.small_cells[selected_SC]['location']
-                    
+                    hot_spot_location = self.small_cells[selected_SC][
+                        'location']
+            
                     while any([loc < 0 or loc > self.size for loc in
                                hot_spot_location]):
                         # Offset hotspots from SC by 5-10 m
-                        hot_spot_location[0] += (choice([-1, 1]) * randint(5, 10))
-                        hot_spot_location[1] += (choice([-1, 1]) * randint(5, 10))
+                        hot_spot_location[0] += (
+                        choice([-1, 1]) * randint(5, 10))
+                        hot_spot_location[1] += (
+                        choice([-1, 1]) * randint(5, 10))
                 else:
                     # Pick a random hotspot location
                     hot_spot_location = [randint(0, self.size),
                                          randint(0, self.size)]
-
+    
             hotspot = {"location": hot_spot_location,
-                       "target": num_UEs_in_hotspot,
-                       "users": 0}
-            self.hotspots.append(hotspot)
+                       # "target": num_UEs_in_hotspot,
+                       "id": i}
+    
+            hotspots.append(hotspot)
+        
+        return hotspots
+    
+    def set_hotspot_scenario(self, frame, hotspots):
+        
+        user_locations = []
+        
+        timestep = frame / self.iterations
+    
+        # Set hotspot parameters.
+        mean_n_UEs = self.mean_n_UEs_start + (
+            (self.mean_n_UEs_end - self.mean_n_UEs_start) * timestep)
+        sigma_n_UEs = self.sigma_n_UEs_start + (
+            (self.sigma_n_UEs_end - self.sigma_n_UEs_start) * timestep)
+        hotspot_size = self.hotspot_size_start + (
+            (self.hotspot_size_end - self.hotspot_size_start) * timestep)
+        
+        for hotspot in hotspots:
+            hotspot_location = [hotspot['location'][0], hotspot['location'][1]]
+    
+            # make this normally dist
+            num_UEs = int(np.random.normal(mean_n_UEs[hotspot['id']],
+                                           sigma_n_UEs[hotspot['id']]))
+    
+            # Set min and max hotspot UEs to 0 and 35 respectively.
+            num_UEs = min(max(0, num_UEs), 35)
+    
+            HS_size = hotspot_size[hotspot['id']]
+    
+            for ue in range(num_UEs):
+                # Set UE locations for hotspot UEs.
+                theta = np.random.rand() * 2 * np.pi
+                r = np.random.uniform(0, HS_size)
+                x = hotspot_location[0] + (choice([-1, 1]) * (r * np.cos(theta)))
+                y = hotspot_location[1] + (choice([-1, 1]) * (r * np.sin(theta)))
+                
+                while any([x < 0 or y < 0 or x > self.size or y > self.size]):
+                    x = hotspot_location[0] + (
+                    choice([-1, 1]) * (r * np.cos(theta)))
+                    y = hotspot_location[1] + (
+                    choice([-1, 1]) * (r * np.sin(theta)))
+                
+                if len(user_locations) < self.n_users:
+                    user_locations.append([x, y])
+
+        for user in range(len(user_locations), self.n_users):
+            user_locations.append(self.get_random_location())
+
+        for i in range(self.n_users):
+            idx = i
+            location = [user_locations[i][0], user_locations[i][1]]
+            user = {'location': location, 'id': idx}
+            self.user_scenarios[frame].append(user)
 
     def distribute_users(self, scenario=1):
         """Sets parameters for all users"""
@@ -301,7 +417,8 @@ class Define_Network():
     def get_random_location(self):
         stop = False
         while stop == False:
-            x, y = [randint(0, self.size), randint(0,self.size)]
+            x, y = [randint(0, self.size),
+                    randint(0, self.size)]
             env_loc = self.environmental_encoding[y, x]
             if env_loc != 0.5:
                 stop = True

@@ -24,6 +24,7 @@ from networks.run_frames import run_baseline_frame, run_benchmark_frame, \
 from networks.network_statistics import stats, get_comparison_stats
 from networks.plotting.CDF import CDFs
 from networks.set_network_parameters import update_network
+from networks.plotting.percentage_plots import percentage_downlink
 
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -102,8 +103,6 @@ class Optimise_Network():
         self.iterations = network.iterations
         self.scenario = network.scenario
         self.user_scenarios = network.user_scenarios
-        self.STRESS_TEST = network.STRESS_TEST
-        self.stress_percentage = network.stress_percentage
         self.bandwidth = params['BANDWIDTH']
         del(network)
 
@@ -304,6 +303,9 @@ class Optimise_Network():
             save_CDF("CDF", plots)
             save_CDF(plot_name + "_bottom", plots, part="bottom")
             save_CDF(plot_name + "_top", plots, part="top")
+            
+            # Save percentage downlink plots.
+            percentage_downlink()
 
         return stats['ave_improvement_R']
 

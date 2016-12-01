@@ -59,17 +59,33 @@ def mane():
     params['PRE_COMPUTE'] = False
     params['SCENARIO'] = 10
     params['ITERATIONS'] = 10
-    params['N_SMALL_TRAINING'] = 79
+    params['N_SMALL_TRAINING'] = 30
     params['REALISTIC'] = True
     params['N_USERS'] = 1260  # 5000
     params['SHOW'] = False
     params['SAVE'] = True
     params['PRINT'] = True
-    params['MAP'] = True
+    params['MAP'] = False
     params['FAIR'] = False
     params['COLLECT_STATS'] = True
     params['TIME_STAMP'] = generate_time_stamp()
+    params['PLOT_ALL_UES'] = True
+    
+    # Hotspot modelling
+    params['mean_n_UEs_in_HS_min'] = 5
+    params['mean_n_UEs_in_HS_max'] = 20
+
+    params['hotspot_size_min'] = 2.5
+    params['hotspot_size_max'] = 12.5
+
+    params['sigma_n_UEs_in_HS_min'] = 0.5
+    params['sigma_n_UEs_in_HS_max'] = 2.5
+    
+    params['dynamic_severity'] = 0.25
+    
+    # Run setup
     setup_run.main()
+    
     if params['SAVE']:
         setup_run.generate_save_folder(params['TIME_STAMP'])
     

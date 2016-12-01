@@ -38,7 +38,11 @@ def run_baseline_frame(self):
         stats['OLR'] = stats['sum_log_R']
         CDFs['baseline_CDF'] = CDFs['CDF_downlink']
         CDFs['ave_CDF_baseline'] += CDFs['CDF_downlink']
-        
+        if params['PLOT_ALL_UES']:
+            CDFs['baseline_downlinks'].extend(CDFs['average_downlinks'])
+        else:
+            CDFs['baseline_downlinks'].extend(
+                CDFs['average_downlinks'][self.SC_UES])
     return self
     
 
@@ -66,6 +70,11 @@ def run_benchmark_frame(self):
         stats['BLR'] = stats['sum_log_R']
         CDFs['benchmark_CDF'] = CDFs['CDF_downlink']
         CDFs['ave_CDF_benchmark'] += CDFs['CDF_downlink']
+        if params['PLOT_ALL_UES']:
+            CDFs['benchmark_downlinks'].extend(CDFs['average_downlinks'])
+        else:
+            CDFs['benchmark_downlinks'].extend(
+                CDFs['average_downlinks'][self.SC_UES])
     
     return self
     
@@ -93,6 +102,11 @@ def run_evolved_frame(self):
         stats['ELR'] = stats['sum_log_R']
         CDFs['evolved_CDF'] = CDFs['CDF_downlink']
         CDFs['ave_CDF_evolved'] += CDFs['CDF_downlink']
+        if params['PLOT_ALL_UES']:
+            CDFs['evolved_downlinks'].extend(CDFs['average_downlinks'])
+        else:
+            CDFs['evolved_downlinks'].extend(
+                CDFs['average_downlinks'][self.SC_UES])
 
     return self
 

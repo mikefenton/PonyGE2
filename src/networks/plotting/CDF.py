@@ -14,7 +14,10 @@ CDFs = {'CDF_downlink': [],
         'evolved_CDF': [],
         'ave_CDF_baseline': [],
         'ave_CDF_benchmark': [],
-        'ave_CDF_evolved': []}
+        'ave_CDF_evolved': [],
+        'baseline_downlinks': [],
+        'evolved_downlinks': [],
+        'benchmark_downlinks': []}
 
 
 def save_CDF(name, opts, part="whole"):

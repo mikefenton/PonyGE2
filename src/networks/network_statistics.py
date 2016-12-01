@@ -237,6 +237,7 @@ def get_user_statistics(self, FIRST=False):
     """
     
     average_downlinks = np.average(self.received_downlinks, axis=0)
+    CDFs['average_downlinks'] = average_downlinks
     average_SINRs = np.average(self.SINR_SF_UE_act, axis=0,
                                weights=self.SINR_SF_UE_act.astype(bool))
     self.average_SINRs = average_SINRs
