@@ -2,6 +2,7 @@ from random import randint, random, sample, choice
 
 from algorithm.parameters import params
 from representation import individual
+from utilities.representation.check_methods import check_ind
 
 
 def crossover(parents):
@@ -18,53 +19,64 @@ def crossover(parents):
 
     # Initialise an empty population.
     cross_pop = []
+    
     while len(cross_pop) < params['GENERATION_SIZE']:
         
         # Randomly choose two parents from the parent population.
         inds_in = sample(parents, 2)
 
-        # Create copies of the original parents. This is necessary as the
-        # original parents remain in the parent population and changes will
-        # affect the originals unless they are cloned.
-        ind_0 = inds_in[0].deep_copy()
-        ind_1 = inds_in[1].deep_copy()
-
-        # Crossover cannot be performed on invalid individuals.
-        if ind_0.invalid or ind_1.invalid:
-            print("Error, invalid inds selected for crossover")
-            exit(2)
-
-        # Perform crossover on ind_0 and ind_1.
-        inds = params['CROSSOVER'](ind_0, ind_1)
+        # Perform crossover on chosen parents.
+        inds_out = crossover_inds(inds_in[0], inds_in[1])
         
-        if any([ind.invalid for ind in inds]):
-            # We have an invalid, need to do crossover again.
-            pass
-        
-        elif params['MAX_TREE_DEPTH'] and \
-                any([ind.depth > params['MAX_TREE_DEPTH'] for ind in inds]):
-            # Tree is too deep, need to do crossover again.
-            pass
-        
-        elif params['MAX_TREE_NODES'] and \
-                any([ind.nodes > params['MAX_TREE_NODES'] for ind in inds]):
-            # Tree has too many nodes, need to do crossover again.
-            pass
-        
-        elif params['MAX_GENOME_LENGTH'] and \
-                any([len(ind.genome) > params['MAX_GENOME_LENGTH'] for ind in
-                     inds]):
-            # Genome is too long, need to do crossover again.
+        if inds_out is None:
+            # Crossover failed.
             pass
         
         else:
-            # Crossover was successful, extend the new population.
-            cross_pop.extend(inds)
+                        
+            # Extend the new population.
+            cross_pop.extend(inds_out)
 
     return cross_pop
 
 
-def variable_onepoint(p_0, p_1, within_used=True):
+def crossover_inds(parent_0, parent_1):
+    """
+    Perform crossover on two selected individuals.
+    
+    :param parent_0: Parent 0 selected for crossover.
+    :param parent_1: Parent 1 selected for crossover.
+    :return: Two crossed-over individuals.
+    """
+
+    # Create copies of the original parents. This is necessary as the
+    # original parents remain in the parent population and changes will
+    # affect the originals unless they are cloned.
+    ind_0 = parent_0.deep_copy()
+    ind_1 = parent_1.deep_copy()
+
+    # Crossover cannot be performed on invalid individuals.
+    if not params['INVALID_SELECTION'] and (ind_0.invalid or ind_1.invalid):
+        s = "operators.crossover.crossover\nError: invalid individuals " \
+            "selected for crossover."
+        raise Exception(s)
+
+    # Perform crossover on ind_0 and ind_1.
+    inds = params['CROSSOVER'](ind_0, ind_1)
+
+    # Check each individual is ok (i.e. does not violate specified limits).
+    checks = [check_ind(ind, "crossover") for ind in inds]
+
+    if any(checks):
+        # An individual violates a limit.
+        return None
+
+    else:
+        # Crossover was successful, return crossed-over individuals.
+        return inds
+
+
+def variable_onepoint(p_0, p_1):
     """
     Given two individuals, create two children using one-point crossover and
     return them. A different point is selected on each genome for crossover
@@ -75,20 +87,14 @@ def variable_onepoint(p_0, p_1, within_used=True):
     
     :param p_0: Parent 0
     :param p_1: Parent 1
-    :param within_used: Boolean flag for selecting whether or not crossover
-    is performed within the used portion of the genome. Default set to True.
     :return: A list of crossed-over individuals.
     """
 
     # Get the chromosomes.
     genome_0, genome_1 = p_0.genome, p_1.genome
 
-    # Uniformly generate crossover points. If within_used==True,
-    # points will be within the used section.
-    if within_used:
-        max_p_0, max_p_1 = p_0.used_codons, p_1.used_codons
-    else:
-        max_p_0, max_p_1 = len(genome_0), len(genome_1)
+    # Uniformly generate crossover points.
+    max_p_0, max_p_1 = get_max_genome_index(p_0, p_1)
         
     # Select unique points on each genome for crossover to occur.
     pt_0, pt_1 = randint(1, max_p_0), randint(1, max_p_1)
@@ -107,7 +113,7 @@ def variable_onepoint(p_0, p_1, within_used=True):
     return [ind_0, ind_1]
 
 
-def fixed_onepoint(p_0, p_1, within_used=True):
+def fixed_onepoint(p_0, p_1):
     """
     Given two individuals, create two children using one-point crossover and
     return them. The same point is selected on both genomes for crossover
@@ -117,20 +123,14 @@ def fixed_onepoint(p_0, p_1, within_used=True):
 
     :param p_0: Parent 0
     :param p_1: Parent 1
-    :param within_used: Boolean flag for selecting whether or not crossover
-    is performed within the used portion of the genome. Default set to True.
     :return: A list of crossed-over individuals.
     """
     
     # Get the chromosomes.
     genome_0, genome_1 = p_0.genome, p_1.genome
-    
-    # Uniformly generate crossover points. If within_used==True,
-    # points will be within the used section.
-    if within_used:
-        max_p_0, max_p_1 = p_0.used_codons, p_1.used_codons
-    else:
-        max_p_0, max_p_1 = len(genome_0), len(genome_1)
+
+    # Uniformly generate crossover points.
+    max_p_0, max_p_1 = get_max_genome_index(p_0, p_1)
     
     # Select the same point on both genomes for crossover to occur.
     pt = randint(1, min(max_p_0, max_p_1))
@@ -149,7 +149,7 @@ def fixed_onepoint(p_0, p_1, within_used=True):
     return [ind_0, ind_1]
 
 
-def fixed_twopoint(p_0, p_1, within_used=True):
+def fixed_twopoint(p_0, p_1):
     """
     Given two individuals, create two children using two-point crossover and
     return them. The same points are selected on both genomes for crossover
@@ -159,19 +159,13 @@ def fixed_twopoint(p_0, p_1, within_used=True):
 
     :param p_0: Parent 0
     :param p_1: Parent 1
-    :param within_used: Boolean flag for selecting whether or not crossover
-    is performed within the used portion of the genome. Default set to True.
     :return: A list of crossed-over individuals.
     """
     
     genome_0, genome_1 = p_0.genome, p_1.genome
 
-    # Uniformly generate crossover points. If within_used==True, points will
-    # be within the used section.
-    if within_used:
-        max_p_0, max_p_1 = p_0.used_codons, p_1.used_codons
-    else:
-        max_p_0, max_p_1 = len(genome_0), len(genome_1)
+    # Uniformly generate crossover points.
+    max_p_0, max_p_1 = get_max_genome_index(p_0, p_1)
 
     # Select the same points on both genomes for crossover to occur.
     a, b = randint(1, max_p_0), randint(1, max_p_1)
@@ -191,7 +185,7 @@ def fixed_twopoint(p_0, p_1, within_used=True):
     return [ind_0, ind_1]
 
 
-def variable_twopoint(p_0, p_1, within_used=True):
+def variable_twopoint(p_0, p_1):
     """
     Given two individuals, create two children using two-point crossover and
     return them. Different points are selected on both genomes for crossover
@@ -201,19 +195,13 @@ def variable_twopoint(p_0, p_1, within_used=True):
 
     :param p_0: Parent 0
     :param p_1: Parent 1
-    :param within_used: Boolean flag for selecting whether or not crossover
-    is performed within the used portion of the genome. Default set to True.
     :return: A list of crossed-over individuals.
     """
     
     genome_0, genome_1 = p_0.genome, p_1.genome
     
-    # Uniformly generate crossover points. If within_used==True, points will
-    # be within the used section.
-    if within_used:
-        max_p_0, max_p_1 = p_0.used_codons, p_1.used_codons
-    else:
-        max_p_0, max_p_1 = len(genome_0), len(genome_1)
+    # Uniformly generate crossover points.
+    max_p_0, max_p_1 = get_max_genome_index(p_0, p_1)
     
     # Select the same points on both genomes for crossover to occur.
     a_0, b_0 = randint(1, max_p_0), randint(1, max_p_1)
@@ -260,7 +248,7 @@ def subtree(p_0, p_1):
         :return: The new derivation trees after subtree crossover has been
         performed.
         """
-    
+        
         # Randomly choose a non-terminal from the set of permissible
         # intersecting non-terminals.
         crossover_choice = choice(shared_nodes)
@@ -325,7 +313,7 @@ def subtree(p_0, p_1):
             # parents.
             t1.parent = p0
             t0.parent = p1
-    
+        
         return tree0, tree1
 
     def intersect(l0, l1):
@@ -356,9 +344,23 @@ def subtree(p_0, p_1):
         ind1 = p_0
     
     else:
-        # Crossover is to be performed. Save tail of each genome.
-        tail_0 = p_0.genome[p_0.used_codons:]
-        tail_1 = p_1.genome[p_1.used_codons:]
+        # Crossover is to be performed.
+    
+        if p_0.invalid:
+            # The individual is invalid.
+            tail_0 = []
+            
+        else:
+            # Save tail of each genome.
+            tail_0 = p_0.genome[p_0.used_codons:]
+
+        if p_1.invalid:
+            # The individual is invalid.
+            tail_1 = []
+
+        else:
+            # Save tail of each genome.
+            tail_1 = p_1.genome[p_1.used_codons:]
         
         # Get the set of labels of non terminals for each tree.
         labels1 = p_0.tree.get_node_labels(set())
@@ -371,36 +373,61 @@ def subtree(p_0, p_1):
             # There are overlapping NTs, cross over parts of trees.
             ret_tree0, ret_tree1 = do_crossover(p_0.tree, p_1.tree,
                                                 shared_nodes)
+        
         else:
             # There are no overlapping NTs, cross over entire trees.
             ret_tree0, ret_tree1 = p_1.tree, p_0.tree
-
-        # Generate list of all non-terminals.
-        nt_keys = params['BNF_GRAMMAR'].non_terminals.keys()
-
-        # Build new individuals.
-        input_0, output_0, invalid_0, depth_0, nodes_0 = \
-            ret_tree0.get_tree_info(nt_keys, [], [])
-        used_codons_0, phenotype_0 = len(input_0), "".join(output_0)
-        genome_0, depth_0 = input_0 + tail_0, depth_0 + 1
-
-        input_1, output_1, invalid_1, depth_1, nodes_1 = \
-            ret_tree1.get_tree_info(nt_keys, [], [])
-        used_codons_1, phenotype_1 = len(input_1), "".join(output_1)
-        genome_1, depth_1 = input_1 + tail_1, depth_1 + 1
         
-        # Initialise new individuals. No need to map as we have all info.
-        ind0 = individual.Individual(genome_0, ret_tree0, map_ind=False)
-        ind1 = individual.Individual(genome_1, ret_tree1, map_ind=False)
+        # Initialise new individuals using the new trees.
+        ind0 = individual.Individual(None, ret_tree0)
+        ind1 = individual.Individual(None, ret_tree1)
 
-        # Set individual parameters.
-        ind0.phenotype, ind0.nodes = phenotype_0, nodes_0
-        ind0.depth, ind0.used_codons = depth_0, used_codons_0
-        ind0.invalid = invalid_0
-
-        # Set individual parameters.
-        ind1.phenotype, ind1.nodes = phenotype_1, nodes_1
-        ind1.depth, ind1.used_codons = depth_1, used_codons_1
-        ind1.invalid = invalid_1
+        # Preserve tails.
+        ind0.genome = ind0.genome + tail_0
+        ind1.genome = ind1.genome + tail_1
 
     return [ind0, ind1]
+
+
+def get_max_genome_index(ind_0, ind_1):
+    """
+    Given two individuals, return the maximum index on each genome across
+    which operations are to be performed. This can be either the used
+    portion of the genome or the entire length of the genome.
+    
+    :param ind_0: Individual 0.
+    :param ind_1: Individual 1.
+    :return: The maximum index on each genome across which operations are to be
+             performed.
+    """
+
+    if params['WITHIN_USED']:
+        # Get used codons range.
+        
+        if ind_0.invalid:
+            # ind_0 is invalid. Default to entire genome.
+            max_p_0 = len(ind_0.genome)
+        
+        else:
+            max_p_0 = ind_0.used_codons
+    
+        if ind_1.invalid:
+            # ind_1 is invalid. Default to entire genome.
+            max_p_1 = len(ind_1.genome)
+        
+        else:
+            max_p_1 = ind_1.used_codons
+    
+    else:
+        # Get length of entire genome.
+        max_p_0, max_p_1 = len(ind_0.genome), len(ind_1.genome)
+        
+    return max_p_0, max_p_1
+
+
+# Set attributes for all operators to define linear or subtree representations.
+variable_onepoint.representation = "linear"
+fixed_onepoint.representation = "linear"
+variable_twopoint.representation = "linear"
+fixed_twopoint.representation = "linear"
+subtree.representation = "subtree"

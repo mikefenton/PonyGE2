@@ -1,9 +1,10 @@
+from multiprocessing import Pool
 from algorithm.parameters import params
 from fitness.evaluation import evaluate_fitness
 from stats.stats import stats, get_stats
-from utilities.algorithm.state import create_state
 from utilities.stats import trackers
-
+from operators.initialisation import initialisation
+from utilities.algorithm.initialise_run import pool_init
 
 def search_loop():
     """
@@ -14,8 +15,13 @@ def search_loop():
     the specified number of generations.
     """
 
+    if params['MULTICORE']:
+        # initialize pool once, if mutlicore is enabled
+        params['POOL'] = Pool(processes=params['CORES'], initializer=pool_init,
+                              initargs=(params,))  # , maxtasksperchild=1)
+
     # Initialise population
-    individuals = params['INITIALISATION'](params['POPULATION_SIZE'])
+    individuals = initialisation(params['POPULATION_SIZE'])
 
     # Evaluate initial population
     individuals = evaluate_fitness(individuals)
@@ -30,13 +36,9 @@ def search_loop():
         # New generation
         individuals = params['STEP'](individuals)
 
-        # Generate statistics for run so far
-        get_stats(individuals)
-
-        if params['SAVE_STATE'] and not params['DEBUG'] and \
-                                generation % params['SAVE_STATE_STEP'] == 0:
-            # Save the state of the current evolutionary run.
-            create_state(individuals)
+    if params['MULTICORE']:
+        # Close the workers pool (otherwise they'll live on forever).
+        params['POOL'].close()
 
     return individuals
 
@@ -51,15 +53,21 @@ def search_loop_from_state():
     """
     
     individuals = trackers.state_individuals
-        
+    
+    if params['MULTICORE']:
+        # initialize pool once, if mutlicore is enabled
+        params['POOL'] = Pool(processes=params['CORES'], initializer=pool_init,
+                              initargs=(params,))  # , maxtasksperchild=1)
+    
     # Traditional GE
     for generation in range(stats['gen'] + 1, (params['GENERATIONS'] + 1)):
         stats['gen'] = generation
         
         # New generation
         individuals = params['STEP'](individuals)
-        
-        # Generate statistics for run so far
-        get_stats(individuals)
+    
+    if params['MULTICORE']:
+        # Close the workers pool (otherwise they'll live on forever).
+        params['POOL'].close()
     
     return individuals

@@ -1,4 +1,9 @@
+from fitness.evaluation import evaluate_fitness
 from algorithm.parameters import params
+from operators.mutation import mutation
+from operators.crossover import crossover_inds
+from operators.selection import selection
+from utilities.algorithm.NSGA2 import compute_pareto_metrics
 
 
 def replacement(new_pop, old_pop):
@@ -41,23 +46,111 @@ def generational(new_pop, old_pop):
     return new_pop[:params['POPULATION_SIZE']]
 
 
-def steady_state(new_pop, old_pop):
+def steady_state(individuals):
     """
-    Combines both old and new populations and returns the top
-    POPULATION_SIZE individuals. In theory this is not true steady state
-    replacement, but it is functionally equivalent.
-     
+    Runs a single generation of the evolutionary algorithm process,
+    using steady state replacement:
+        Selection
+        Variation
+        Evaluation
+        Replacement
+        
+    Steady state replacement uses the Genitor model (Whitley, 1989) whereby
+    new individuals directly replace the worst individuals in the population
+    regardless of whether or not the new individuals are fitter than those
+    they replace. Note that traditional GP crossover generates only 1 child,
+    whereas linear GE crossover (and thus all crossover functions used in
+    PonyGE) generates 2 children from 2 parents. Thus, we use a deletion
+    strategy of 2.
+
+    :param individuals: The current generation, upon which a single
+    evolutionary generation will be imposed.
+    :return: The next generation of the population.
+    """
+
+    # Initialise counter for new individuals.
+    ind_counter = 0
+
+    while ind_counter < params['POPULATION_SIZE']:
+        
+        # Select parents from the original population.
+        parents = selection(individuals)
+
+        # Perform crossover on selected parents.
+        cross_pop = crossover_inds(parents[0], parents[1])
+        
+        if cross_pop is None:
+            # Crossover failed.
+            pass
+
+        else:
+            # Mutate the new population.
+            new_pop = mutation(cross_pop)
+        
+            # Evaluate the fitness of the new population.
+            new_pop = evaluate_fitness(new_pop)
+    
+            # Sort the original population
+            individuals.sort(reverse=True)
+    
+            # Combine both populations
+            total_pop = individuals[:-len(new_pop)] + new_pop
+        
+            # Increment the ind counter
+            ind_counter += params['GENERATION_SIZE']
+
+    # Return the combined population.
+    return total_pop
+
+
+def nsga2_replacement(new_pop, old_pop):
+    """
+    Replaces the old population with the new population using NSGA-II
+    replacement. Both new and old populations are combined, pareto fronts
+    and crowding distance are calculated, and the replacement population is
+    computed based on crowding distance per pareto front.
+    
     :param new_pop: The new population (e.g. after selection, variation, &
-    evaluation).
+                    evaluation).
     :param old_pop: The previous generation population.
     :return: The 'POPULATION_SIZE' new population.
     """
+
+    # Combine both populations (R_t = P_t union Q_t)
+    new_pop.extend(old_pop)
+
+    # Compute the pareto fronts and crowding distance
+    pareto = compute_pareto_metrics(new_pop)
+
+    # Size of the new population
+    pop_size = params['POPULATION_SIZE']
+
+    # New population to replace the last one
+    temp_pop, i = [], 0
+
+    while len(temp_pop) < pop_size:
+        # Populate the replacement population
+        
+        if len(pareto.fronts[i]) <= pop_size - len(temp_pop):
+            temp_pop.extend(pareto.fronts[i])
+        
+        else:
+            # Sort the current pareto front with respect to crowding distance.
+            pareto.fronts[i] = sorted(pareto.fronts[i],
+                                      key=lambda item:
+                                      pareto.crowding_distance[item])
+        
+            # Get number of individuals to add in temp to achieve the pop_size
+            diff_size = pop_size - len(temp_pop)
+            
+            # Extend the replacement population
+            temp_pop.extend(pareto.fronts[i][:diff_size])
     
-    # Combine both populations
-    total_pop = old_pop + new_pop
+        # Increment counter.
+        i += 1
     
-    # Sort the combined population
-    total_pop.sort(reverse=True)
-    
-    # Return the top POPULATION_SIZE individuals of the combined population.
-    return total_pop[:params['POPULATION_SIZE']]
+    return temp_pop
+
+
+# Set attributes for all operators to define multi-objective operators.
+nsga2_replacement.multi_objective = True

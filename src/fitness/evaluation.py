@@ -1,9 +1,8 @@
-from multiprocessing import Pool
+import numpy as np
 
 from algorithm.parameters import params
-from fitness.default_fitness import default_fitness
 from stats.stats import stats
-from utilities.stats.trackers import cache
+from utilities.stats.trackers import cache, runtime_error_cache
 
 
 def evaluate_fitness(individuals):
@@ -23,26 +22,26 @@ def evaluate_fitness(individuals):
            have already been evaluated are mutated to produce new unique
            individuals which have not been encountered yet by the search
            process.
-    
+
     :param individuals: A population of individuals to be evaluated.
     :return: A population of fully evaluated individuals.
     """
 
     results, pool = [], None
+    
     if params['MULTICORE']:
-        # Initialise a pool of jobs for multicore process workers.
-        pool = Pool(processes=params['CORES'])  # , maxtasksperchild=1)
+        pool = params['POOL']
 
     for name, ind in enumerate(individuals):
         ind.name = name
-        
+
         # Iterate over all individuals in the population.
         if ind.invalid:
             # Invalid individuals cannot be evaluated and are given a bad
             # default fitness.
-            ind.fitness = default_fitness(params['FITNESS_FUNCTION'].maximise)
+            ind.fitness = params['FITNESS_FUNCTION'].default_fitness
             stats['invalids'] += 1
-        
+
         else:
             eval_ind = True
 
@@ -59,8 +58,7 @@ def evaluate_fitness(individuals):
 
                 elif params['LOOKUP_BAD_FITNESS']:
                     # Give the individual a bad default fitness.
-                    ind.fitness = default_fitness(
-                        params['FITNESS_FUNCTION'].maximise)
+                    ind.fitness = params['FITNESS_FUNCTION'].default_fitness
                     eval_ind = False
 
                 elif params['MUTATE_DUPLICATES']:
@@ -69,6 +67,10 @@ def evaluate_fitness(individuals):
                     while (not ind.phenotype) or ind.phenotype in cache:
                         ind = params['MUTATION'](ind)
                         stats['regens'] += 1
+                    
+                    # Need to overwrite the current individual in the pop.
+                    individuals[name] = ind
+                    ind.name = name
 
             if eval_ind:
                 results = eval_or_append(ind, results, pool)
@@ -77,17 +79,18 @@ def evaluate_fitness(individuals):
         for result in results:
             # Execute all jobs in the pool.
             ind = result.get()
-        
+
             # Set the fitness of the evaluated individual by placing the
             # evaluated individual back into the population.
             individuals[ind.name] = ind
-        
+
             # Add the evaluated individual to the cache.
             cache[ind.phenotype] = ind.fitness
         
-        # Close the workers pool (otherwise they'll live on forever).
-        pool.close()
-
+            # Check if individual had a runtime error.
+            if ind.runtime_error:
+                runtime_error_cache.append(ind.phenotype)
+                    
     return individuals
 
 
@@ -96,7 +99,7 @@ def eval_or_append(ind, results, pool):
     Evaluates an individual if sequential evaluation is being used. If
     multi-core parallel evaluation is being used, adds the individual to the
     pool to be evaluated.
-    
+
     :param ind: An individual to be evaluated.
     :param results: A list of individuals to be evaluated by the multicore
     pool of workers.
@@ -109,12 +112,24 @@ def eval_or_append(ind, results, pool):
         # Add the individual to the pool of jobs.
         results.append(pool.apply_async(ind.evaluate, ()))
         return results
+    
     else:
         # Evaluate the individual.
         ind.evaluate()
-        
+
+        # Check if individual had a runtime error.
+        if ind.runtime_error:
+            runtime_error_cache.append(ind.phenotype)
+
         if params['CACHE']:
             # The phenotype string of the individual does not appear
             # in the cache, it must be evaluated and added to the
             # cache.
-            cache[ind.phenotype] = ind.fitness
+            
+            if (isinstance(ind.fitness, list) and not
+                    any([np.isnan(i) for i in ind.fitness])) or \
+                    (not isinstance(ind.fitness, list) and not
+                     np.isnan(ind.fitness)):
+                
+                # All fitnesses are valid.
+                cache[ind.phenotype] = ind.fitness

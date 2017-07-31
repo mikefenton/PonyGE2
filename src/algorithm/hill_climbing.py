@@ -1,10 +1,8 @@
 from algorithm.parameters import params
 from fitness.evaluation import evaluate_fitness
 from stats.stats import stats, get_stats
+from utilities.stats import trackers
 
-import random
-import numpy as np
-import math
 
 """Hill-climbing is just about the simplest metaheuristic there
 is. It's of interest in GP/GE because of the lingering suspicion among
@@ -57,30 +55,30 @@ count only accepted, or only improving moves.
 """
 
 
-
-"""
-This is the LAHC pseudo-code from Bykov and Burke.
-
-Produce an initial solution s
-Calculate initial cost function C(s)
-Specify Lfa
-For all k in {0...Lfa-1} f_k := C(s)
-First iteration I=0;
-Do until a chosen stopping condition
-    Construct a candidate solution s*
-    Calculate its cost function C(s*)
-    v := I mod Lfa
-    If C(s*)<=fv or C(s*)<=C(s)
-    Then accept the candidate (s:=s*)
-    Else reject the candidate (s:=s)
-    Insert the current cost into the fitness array fv:=C(s)
-    Increment the iteration number I:=I+1
-
-"""
-
 def LAHC_search_loop():
+    """
+    Search loop for Late Acceptance Hill Climbing.
+    
+    This is the LAHC pseudo-code from Burke and Bykov:
 
-    maximise = params['FITNESS_FUNCTION'].maximise
+        Produce an initial solution best
+        Calculate initial cost function C(best)
+        Specify Lfa
+        For all k in {0...Lfa-1} f_k := C(best)
+        First iteration iters=0;
+        Do until a chosen stopping condition
+            Construct a candidate solution best*
+            Calculate its cost function C(best*)
+            idx := iters mod Lfa
+            If C(best*)<=f_idx or C(best*)<=C(best)
+            Then accept the candidate (best:=best*)
+            Else reject the candidate (best:=best)
+            Insert the current cost into the fitness array f_idx:=C(best)
+            Increment the iteration number iters:=iters+1
+    
+    :return: The final population.
+    """
+
     max_its = params['POPULATION_SIZE'] * params['GENERATIONS']
 
     # Initialise population
@@ -92,12 +90,16 @@ def LAHC_search_loop():
     # Generate statistics for run so far
     get_stats(individuals)
 
+    # Find the best individual so far.
+    best = trackers.best_ever
+    
+    # Set history.
     Lfa = params['HILL_CLIMBING_HISTORY']
-    s = stats['best_ever']
-    Cs = s.fitness
-    f = Cs * np.ones(Lfa) # history
+    history = [best for _ in range(Lfa)]
 
-    I = len(individuals)
+    # iters is the number of individuals examined so far.
+    iters = len(individuals)
+    
     for generation in range(1, (params['GENERATIONS']+1)):
 
         this_gen = []
@@ -107,84 +109,95 @@ def LAHC_search_loop():
         # "generation"
         for j in range(params['POPULATION_SIZE']):
 
-            this_gen.append(s) # collect this "generation"
+            this_gen.append(best)  # collect this "generation"
 
-            s_ = params['MUTATION'](s) # mutate s to get candidate s*
-            Cs_ = s.fitness
+            # Mutate the best to get the candidate best
+            candidate_best = params['MUTATION'](best)
+            if not candidate_best.invalid:
+                candidate_best.evaluate()
 
-            v = I % Lfa
-            # ugly
-            if ((maximise and (Cs_ >= f[v] or Cs_ >= Cs)) or
-                (not maximise and (Cs_ <= f[v] or Cs_ <= Cs))):
-                # accept the candidate
-                s = s_
-                Cs = Cs_
+            # Find the index of the relevant individual from the late
+            # acceptance history.
+            idx = iters % Lfa
+            
+            if candidate_best >= history[idx]:
+                best = candidate_best  # Accept the candidate
+    
             else:
-                pass # reject the candidate
+                pass  # reject the candidate
 
-            f[v] = Cs
-            I += 1
+            # Set the new best into the history.
+            history[idx] = best
+            
+            # Increment evaluation counter.
+            iters += 1
 
-            # break from inner and outer if needed
-            if I >= max_its: break
+            if iters >= max_its:
+                # We have completed the total number of iterations.
+                break
 
-        # but get this get stats first
+        # Get stats for this "generation".
         stats['gen'] = generation
         get_stats(this_gen)
 
-        if I >= max_its: break
+        if iters >= max_its:
+            # We have completed the total number of iterations.
+            break
 
     return individuals
 
-"""
-This is the SCHC pseudo-code from Bykov and Petrovic.
-
-Produce an initial solution s
-Calculate an initial cost function C(s)
-Initial cost bound Bc := C(s)
-Initial counter nc := 0
-Specify Lc
-Do until a chosen stopping condition
-    Construct a candidate solution s*
-    Calculate the candidate cost function C(s*)
-    If C(s*) < Bc or C(s*) <= C(s)
-        Then accept the candidate s := s*
-        Else reject the candidate s := s
-    Increment the counter nc := nc + 1
-    If nc >= Lc
-        Then update the bound Bc := C(s)
-        reset the counter nc := 0
-
-Two alternative counting methods (start at the first If):
-
-SCHC-acp counts only accepted moves:
-
-    If C(s*) < Bc or C(s*) <= C(s)
-        Then accept the candidate s := s*
-             increment the counter nc := nc + 1
-        Else reject the candidate s := s
-    If nc >= Lc
-        Then update the bound Bc := C(s)
-             reset the counter nc := 0
-
-SCHC-imp counts only improving moves:
-
-    If C(s*) < C(s)
-        Then increment the counter nc := nc + 1
-    If C(s*) < Bc or C(s*) <= C(s)
-        Then accept the candidate s := s*
-        Else reject the candidate s := s
-    If nc >= Lc
-        Then update the bound Bc := C(s)
-             reset the counter nc := 0
-"""
 
 def SCHC_search_loop():
+    """
+    Search Loop for Step-Counting Hill-Climbing.
+    
+    This is the SCHC pseudo-code from Bykov and Petrovic.
 
-    maximise = params['FITNESS_FUNCTION'].maximise
+        Produce an initial solution best
+        Calculate an initial cost function C(best)
+        Initial cost bound cost_bound := C(best)
+        Initial counter counter := 0
+        Specify history
+        Do until a chosen stopping condition
+            Construct a candidate solution best*
+            Calculate the candidate cost function C(best*)
+            If C(best*) < cost_bound or C(best*) <= C(best)
+                Then accept the candidate best := best*
+                Else reject the candidate best := best
+            Increment the counter counter := counter + 1
+            If counter >= history
+                Then update the bound cost_bound := C(best)
+                reset the counter counter := 0
+        
+        Two alternative counting methods (start at the first If):
+        
+        SCHC-acp counts only accepted moves:
+        
+            If C(best*) < cost_bound or C(best*) <= C(best)
+                Then accept the candidate best := best*
+                     increment the counter counter := counter + 1
+                Else reject the candidate best := best
+            If counter >= history
+                Then update the bound cost_bound := C(best)
+                     reset the counter counter := 0
+        
+        SCHC-imp counts only improving moves:
+        
+            If C(best*) < C(best)
+                Then increment the counter counter := counter + 1
+            If C(best*) < cost_bound or C(best*) <= C(best)
+                Then accept the candidate best := best*
+                Else reject the candidate best := best
+            If counter >= history
+                Then update the bound cost_bound := C(best)
+                     reset the counter counter := 0
+    
+    :return: The final population.
+    """
+    
+    # Calculate maximum number of evaluation iterations.
     max_its = params['POPULATION_SIZE'] * params['GENERATIONS']
-    count_method = "all" # TODO
-    accept_method = "bykov" # TODO
+    count_method = params['SCHC_COUNT_METHOD']
 
     # Initialise population
     individuals = params['INITIALISATION'](params['POPULATION_SIZE'])
@@ -195,13 +208,17 @@ def SCHC_search_loop():
     # Generate statistics for run so far
     get_stats(individuals)
 
-    Lc = params['HILL_CLIMBING_HISTORY']
-    s = stats['best_ever']
-    Cs = s.fitness
-    Bc = Cs # initial cost bound
-    nc = 0
+    # Set best individual and initial cost bound.
+    best = trackers.best_ever
+    cost_bound = best.deep_copy()
 
-    I = len(individuals)
+    # Set history and counter.
+    history = params['HILL_CLIMBING_HISTORY']
+    counter = 0
+    
+    # iters is the number of individuals examined/iterations so far.
+    iters = len(individuals)
+    
     for generation in range(1, (params['GENERATIONS']+1)):
 
         this_gen = []
@@ -211,57 +228,54 @@ def SCHC_search_loop():
         # "generation"
         for j in range(params['POPULATION_SIZE']):
 
-            this_gen.append(s) # collect this "generation"
+            this_gen.append(best)  # collect this "generation"
 
-            s_ = params['MUTATION'](s) # mutate s to get candidate s*
-            Cs_ = s.fitness
+            # Mutate best to get candidate best.
+            candidate_best = params['MUTATION'](best)
+            if not candidate_best.invalid:
+                candidate_best.evaluate()
 
             # count
-            if count_method == "all": # we count all iterations (moves)
-                nc += 1 # increment the counter
-            elif count_method == "acp": # we count accepted moves only
-                if ((maximise and (Cs_ > Bc or Cs_ >= Cs)) or
-                    (not maximise and (Cs_ < Bc or Cs_ <= Cs))):
-                    nc += 1 # increment the counter
-            elif count_method == "imp": # we count improving moves only
-                if ((maximise and Cs_ > Cs) or
-                    (not maximise and Cs_ < Cs)):
-                    nc += 1 # increment the counter
+            if count_method == "count_all":  # we count all iterations (moves)
+                counter += 1  # increment the counter
+            
+            elif count_method == "acp":  # we count accepted moves only
+                if candidate_best > cost_bound or candidate_best >= best:
+                    counter += 1  # increment the counter
+            
+            elif count_method == "imp":  # we count improving moves only
+                if candidate_best > best:
+                    counter += 1  # increment the counter
+            
             else:
-                raise ValueError("Unknown count method " + count_method)
+                s = "algorithm.hill_climbing.SCHC_search_loop\n" \
+                    "Error: Unknown count method: %s" % (count_method)
+                raise Exception(s)
 
             # accept
-            if accept_method == "bykov":
-                # standard accept method
-                if ((maximise and (Cs_ > Bc or Cs_ >= Cs)) or
-                    (not maximise and (Cs_ < Bc or Cs_ <= Cs))):
-                    s = s_ # accept the candidate
-                    Cs = Cs_
-                else:
-                    pass # reject the candidate
-
-            elif accept_method == "nicolau":
-                if maximise and Cs_ >= Bc:
-                    s = s_ # accept the candidate
-                    Cs = Cs_
-                else:
-                    pass # reject the candidate
-
+            if candidate_best > cost_bound or candidate_best >= best:
+                best = candidate_best  # accept the candidate
+  
             else:
-                raise ValueError("Unknown accept method " + accept_method)
+                pass  # reject the candidate
 
-            if nc >= Lc:
-                Bc = Cs # update the bound
-                nc = 0 # reset the counter
-            I += 1
+            if counter >= history:
+                cost_bound = best  # update the bound
+                counter = 0  # reset the counter
 
-            # break from inner and outer if needed
-            if I >= max_its: break
+            # Increment iteration counter.
+            iters += 1
 
-        # but get this gen stats first
+            if iters >= max_its:
+                # We have completed the total number of iterations.
+                break
+
+        # Get stats for this "generation".
         stats['gen'] = generation
         get_stats(this_gen)
 
-        if I >= max_its: break
+        if iters >= max_its:
+            # We have completed the total number of iterations.
+            break
 
     return individuals
