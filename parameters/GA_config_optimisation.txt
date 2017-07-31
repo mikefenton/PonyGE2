@@ -1,11 +1,11 @@
 CACHE:                 True
-CROSSOVER:             subtree
+CROSSOVER:             fixed_twopoint
 CROSSOVER_PROBABILITY: 0.75
 DEBUG:                 False
 GENERATIONS:           20
 GENOME_LENGTH:         500
-GRAMMAR_FILE:          scheduling_complete.bnf
-INITIALISATION:        rhh
+GRAMMAR_FILE:          None
+INITIALISATION:        experimental.config_optimisation.initialisation
 LOOKUP_BAD_FITNESS:    True
 LOOKUP_FITNESS:        False
 MAX_INIT_DEPTH:        20
@@ -13,10 +13,10 @@ MAX_TREE_DEPTH:        20
 MAX_WRAPS:             0
 MULTICORE:             False
 MUTATE_DUPLICATES:     False
-MUTATION:              subtree
+MUTATION:              experimental.config_optimisation.mutation
 POPULATION_SIZE:       10
-FITNESS_FUNCTION:      scheduling_optimisation
-RUN_AS_GA:             False
+FITNESS_FUNCTION:      config_optimisation
+RUN_AS_GA:             True
 RANDOM_SEED:           None
 REPLACEMENT:           generational
 SAVE_ALL:              False
@@ -34,7 +34,7 @@ ITERATIONS:            10
 N_USERS:               1260
 SIMULATION:            False
 BIAS_LIMIT:            15
-PRE_COMPUTE:           True
+PRE_COMPUTE:           False
 NETWORK_OPTIMISATION:  True
 STRESS_TEST:           False
 RUNS:                  20

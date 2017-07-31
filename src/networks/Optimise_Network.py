@@ -20,7 +20,7 @@ from networks.set_power_bias import set_benchmark_pb, balance_bias, \
     balance_network
 from networks.comparisons import get_average_performance
 from networks.run_frames import run_baseline_frame, run_benchmark_frame, \
-    run_evolved_frame
+    run_evolved_frame, run_GA_frame
 from networks.network_statistics import stats, get_comparison_stats
 from networks.plotting.CDF import CDFs
 from networks.set_network_parameters import update_network
@@ -35,6 +35,7 @@ class Optimise_Network():
     def __init__(self,
                 SC_power=None,
                 SC_CSB=None,
+                MC_ABS=None,
                 bias_limit=15,
                 SCHEDULING_ALGORITHM=None,
                 SCHEDULING_TYPE="original_sched",
@@ -66,6 +67,7 @@ class Optimise_Network():
         self.user_locations = []
         self.environmental_encoding = network.environmental_encoding
         self.gains = network.gains
+        self.cumulatvie_ABS_frames = np.asarray([0 for _ in range(40)])
         for i, small in enumerate(self.small_cells):
             if SC_power:
                 small['power'] = float(SC_power[i])
@@ -89,8 +91,16 @@ class Optimise_Network():
             small['SINR_frame'] = [[] for _ in range(40)]
             small['sum_SINR'] = [0 for _ in range(40)]
         for i, macro in enumerate(self.macro_cells):
+            if MC_ABS:
+                macro['ABS_ratio'] = float(MC_ABS[i])
+                macro['ABS_pattern'] = np.array([1 for _ in range(40)])
+                for i in range(int(
+                        round(round((1 - macro['ABS_ratio']), 3) / 0.025))):
+                    macro['ABS_pattern'][(i * 8) % 39] = 0
+                macro['ABS_pattern'] = np.asarray(macro['ABS_pattern'])
+                self.cumulatvie_ABS_frames += (-macro['ABS_pattern'] + 1)
             macro['potential_users'] = []
-            macro['attached_users']=[]
+            macro['attached_users'] = []
             macro['small_interactions'] = []
             macro['sum_log_R'] = 0
             macro['SINR_frame'] = [[] for _ in range(40)]
@@ -183,25 +193,8 @@ class Optimise_Network():
             self.iteration = self.scenario + frame
             self.users = self.user_scenarios[frame]
 
-            if self.BENCHMARK:
-                if params['FAIR']:
-                    self = balance_network(self)
-                else:
-                    self = set_benchmark_pb(self)
-                    self = update_network(self)
-                self = run_evolved_frame(self)
-
-            elif self.ALL_TOGETHER:
-                # If we're evolving everything together then we don't need to
-                # run things separately to get individual fitnesses. We only
-                # need to run the network multiple times in order to get
-                # individual fitnesses for ABS and Scheduling (i.e. the
-                # fitness for scheduling will be the increase in fitness over
-                # ABS, etc.). If we're doing everything together, then we can
-                # just do it all in one step and save a ton of time since we
-                # get the same answer anyway. Good stuff!
-                self = balance_network(self)
-                answers = self.run_full_frame(two=self.PRINT, three=self.SAVE)
+            if self.GA:
+                self = run_GA_frame(self)
 
             elif not self.ABS_algorithm and not self.SCHEDULING:
                 # Just the fitness from the pb algorithm
@@ -244,7 +237,7 @@ class Optimise_Network():
                 # no point checking other scenarios this guy sucks
                 break
 
-            return stats['ave_improvement_R']
+            return stats
 
     def run_all_2(self):
         """run all functions in the class"""

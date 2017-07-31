@@ -10,6 +10,38 @@ from networks.set_power_bias import set_benchmark_pb
 from utilities.fitness.math_functions import pdiv
 
 
+def run_GA_frame(self):
+    """
+    Run baseline scheduling.
+
+    :param self:
+    :return: Self.
+    """
+    
+    # print("Baseline scheduling")
+    self.ALL_TOGETHER = True
+
+    # Set all network parameters including ABSrs, SINRs, UE attachments, etc.
+    self = update_network(self)
+    
+    if self.PRE_COMPUTE:
+        self.scheduling_decisions, self = set_scheduling(self)
+    
+    self = run_full_frame(self)
+    self.BASELINE_SCHEDULING = False
+    
+    if params['COLLECT_STATS']:
+        stats['OLR'] = stats['sum_log_R']
+        CDFs['baseline_CDF'] = CDFs['CDF_downlink']
+        CDFs['ave_CDF_baseline'] += CDFs['CDF_downlink']
+        if params['PLOT_ALL_UES']:
+            CDFs['baseline_downlinks'].extend(CDFs['average_downlinks'])
+        else:
+            CDFs['baseline_downlinks'].extend(
+                CDFs['average_downlinks'][self.SC_UES])
+    return self
+
+
 def run_baseline_frame(self):
     """
     Run baseline scheduling.

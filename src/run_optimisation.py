@@ -92,6 +92,7 @@ def mane():
     """ Compares given solutions against both baseline and benchmark results.
         Returns the average difference in performance between the evolved and
         benchmark methods (in terms of a percentage)."""
+    
     COMPARE = False
 
     """ Run the network but using the benchmark methods for ABS and scheduling.

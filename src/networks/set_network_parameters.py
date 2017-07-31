@@ -334,7 +334,7 @@ def update_network(self):
                            self.UE_locations_x] + np.array(self.all_powers)[:,
                                                   np.newaxis]
     self.all_cell_bias = np.asarray(
-        [0 for i in range(self.n_macro_cells)] + self.small_biases)
+        [0 for _ in range(self.n_macro_cells)] + self.small_biases)
     self.cell_attachment = self.all_cell_powers + self.all_cell_bias[:,
                                                   np.newaxis]
     
@@ -363,7 +363,8 @@ def update_network(self):
     del (self.all_powers)
     
     self = set_users(self)
-    self = get_ABS(self)
+    if not params['RUN_AS_GA']:
+        self = get_ABS(self)
     self = set_SINR(self)
     if not self.PRE_COMPUTE:
         self.scheduling_decisions, self = set_scheduling(self)
